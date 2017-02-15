@@ -1,0 +1,9 @@
+name: monocypher
+version: 0.1.0
+
+authors:
+  - Konovod <konovod@gmail.com>
+
+crystal: 0.20.3
+
+license: MIT

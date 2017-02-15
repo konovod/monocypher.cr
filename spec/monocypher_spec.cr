@@ -2,7 +2,7 @@ require "./spec_helper"
 
 describe Crypto do
 
-  it "hashes password" do
+  it "hashes password, compare buffers" do
     pass = "12345678"
     salt = Crypto::Salt.new
     key1 = Crypto::SecretKey.new(password: pass, salt: salt)
@@ -10,6 +10,10 @@ describe Crypto do
     key3 = Crypto::SecretKey.new(password: "12345678z", salt: salt)
     key1.should eq key2
     key1.should_not eq key3
+
+    key1.compare(key2).should be_true
+    key1.compare(key3).should be_false
+    key1.compare(salt).should be_false
   end
 
   it "generate public keys" do

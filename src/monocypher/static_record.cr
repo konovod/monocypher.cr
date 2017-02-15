@@ -24,6 +24,10 @@ module StaticRecord
         @data
       end
 
+      def compare(other) : Bool
+        return typeof(other) == typeof(self) && LibMonoCypher.memcmp(to_unsafe, other.to_unsafe, self.class.size) == 0
+      end
+
       def to_pointer
         @data.to_unsafe
       end

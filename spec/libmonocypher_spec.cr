@@ -37,19 +37,6 @@ describe "LibMonoCypher" do
     LibMonoCypher.ae_unlock(aout, key, nonce, box, 8).should_not eq 0 #reject forgery
   end
 
-  it "test_ae" do
-    key = UInt8.static_array(0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7)
-    nonce = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7)
-    plaintext = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7 )
-    box = StaticArray(UInt8, 24).new(0_u8)
-    aout = StaticArray(UInt8, 24).new(0_u8)
-    LibMonoCypher.ae_lock(box, key, nonce, plaintext, 8) # make true message
-    LibMonoCypher.ae_unlock(aout, key, nonce, box, 8).should eq 0 #accept true message
-    LibMonoCypher.memcmp(aout,plaintext,8).should eq 0 #roundtrip
-    box[0]+=1
-    LibMonoCypher.ae_unlock(aout, key, nonce, box, 8).should_not eq 0 #reject forgery
-  end
-
   it "test_lock" do
     rk = UInt8.static_array(1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0,
                             1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0)

@@ -4,7 +4,7 @@ describe Crypto do
 
   it "hashes password" do
     pass = "12345678"
-    salt = Crypto::Salt.new()
+    salt = Crypto::Salt.new
     key1 = Crypto::SecretKey.new(password: pass, salt: salt)
     key2 = Crypto::SecretKey.new(password: "12345678", salt: salt)
     key3 = Crypto::SecretKey.new(password: "12345678z", salt: salt)
@@ -13,8 +13,8 @@ describe Crypto do
   end
 
   it "generate public keys" do
-    secret1 = Crypto::SecretKey.new(random: true)
-    secret2 = Crypto::SecretKey.new(random: true)
+    secret1 = Crypto::SecretKey.new
+    secret2 = Crypto::SecretKey.new
     public1 = Crypto::PublicKey.new(secret: secret1)
     public2 = Crypto::PublicKey.new(secret: secret2)
     public11 = Crypto::PublicKey.new(secret: secret1)

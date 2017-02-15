@@ -37,6 +37,9 @@ describe Crypto do
     result = Bytes.new(plaintext.size)
     Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_true
     String.new(result).should eq message
+
+    ciphertext.to_unsafe[0] += 1
+    Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_false
   end
 
   it "does asymmetric cryptography" do
@@ -53,6 +56,9 @@ describe Crypto do
     result = Bytes.new(plaintext.size)
     Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_true
     String.new(result).should eq message
+
+    ciphertext.to_unsafe[13] += 1
+    Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_false
   end
 
   it "does one pair asymmetric cryptography" do
@@ -66,6 +72,9 @@ describe Crypto do
     result = Bytes.new(plaintext.size)
     Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
     String.new(result).should eq message
-  end
+
+    ciphertext.to_unsafe[29] += 1
+    Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_false
+end
 
 end

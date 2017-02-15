@@ -83,7 +83,7 @@ def self.symmetric_decrypt(*, output : Bytes, key : SymmetricKey, input): Bool
   raise "data sizes doesn't match" if input.size != output.size+Header.size+Nonce.size
   nonce = Nonce.new
   nonce.to_slice.copy_from(input[0, Nonce.size])
-  return LibMonoCypher.ae_unlock(output, key, nonce, input, output.size) == 0
+  return LibMonoCypher.ae_unlock(output, key, nonce, input[Nonce.size, Header.size+output.size], output.size) == 0
 end
 
 

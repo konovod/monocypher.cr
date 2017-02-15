@@ -29,13 +29,10 @@ describe Crypto do
     message = "This is a test message русский текст"
     plaintext = message.bytes
     ciphertext = Bytes.new(plaintext.size+Crypto::Header.size+Crypto::Nonce.size)
-    p ciphertext
     Crypto.symmetric_encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
-
-    p ciphertext
     result = Bytes.new(plaintext.size)
     Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_true
-
+    String.new(result).should eq message
   end
 
 

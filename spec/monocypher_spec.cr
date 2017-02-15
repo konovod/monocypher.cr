@@ -51,4 +51,17 @@ describe Crypto do
     String.new(result).should eq message
   end
 
+  it "does one pair asymmetric cryptography" do
+    bob_secret = Crypto::SecretKey.new
+    bob_public = Crypto::PublicKey.new(secret: bob_secret)
+
+    message = "This is a test message русский текст"
+    plaintext = message.bytes
+    ciphertext = Bytes.new(plaintext.size+Crypto::Header.size+Crypto::SecretKey.size)
+    Crypto.asymmetric_encrypt(their_public: bob_public, input: plaintext, output: ciphertext)
+    result = Bytes.new(plaintext.size)
+    Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
+    String.new(result).should eq message
+  end
+
 end

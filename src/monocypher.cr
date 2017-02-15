@@ -68,7 +68,7 @@ end
 struct PublicKey
   def initialize(*, secret : SecretKey)
     @data = uninitialized UInt8[32]
-    LibMonoCypher.ed25519_public_key(@data, secret)
+    LibMonoCypher.x25519_public_key(@data, secret)
   end
 end
 
@@ -97,6 +97,17 @@ def self.asymmetric_decrypt(*, output : Bytes, your_secret : SecretKey, their_pu
   nonce = Nonce.new
   nonce.to_slice.copy_from(input[0, Nonce.size])
   return LibMonoCypher.unlock(output, your_secret, their_public, nonce, input[Nonce.size, Header.size+output.size], output.size) == 0
+end
+
+def self.asymmetric_encrypt(*, output : Bytes, their_public : PublicKey, input)
+  raise "data sizes doesn't match" if input.size+Header.size+SecretKey.size != output.size
+  random_secret = SecretKey.new
+  LibMonoCypher.anonymous_lock(output, random_secret, their_public, input, input.size)
+end
+
+def self.asymmetric_decrypt(*, output : Bytes, your_secret : SecretKey, input): Bool
+  raise "data sizes doesn't match" if input.size != output.size+Header.size+SecretKey.size
+  return LibMonoCypher.anonymous_unlock(output, your_secret, input, output.size) == 0
 end
 
 end

@@ -86,5 +86,17 @@ def self.symmetric_decrypt(*, output : Bytes, key : SymmetricKey, input): Bool
   return LibMonoCypher.ae_unlock(output, key, nonce, input[Nonce.size, Header.size+output.size], output.size) == 0
 end
 
+def self.asymmetric_encrypt(*, output : Bytes, your_secret : SecretKey, their_public : PublicKey, nonce : Nonce, input)
+  raise "data sizes doesn't match" if input.size+Header.size+Nonce.size != output.size
+  LibMonoCypher.lock(output[Nonce.size, Header.size+input.size], your_secret, their_public, nonce, input, input.size)
+  output[0, Nonce.size].copy_from(nonce.to_slice)
+end
+
+def self.asymmetric_decrypt(*, output : Bytes, your_secret : SecretKey, their_public : PublicKey, input): Bool
+  raise "data sizes doesn't match" if input.size != output.size+Header.size+Nonce.size
+  nonce = Nonce.new
+  nonce.to_slice.copy_from(input[0, Nonce.size])
+  return LibMonoCypher.unlock(output, your_secret, their_public, nonce, input[Nonce.size, Header.size+output.size], output.size) == 0
+end
 
 end

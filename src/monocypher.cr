@@ -5,57 +5,13 @@ require "./monocypher/*"
 module Crypto
   MUCH_MB = 1
 
-macro random_record(name, size)
-  struct {{name}}
-    @data : StaticArray(UInt8, {{size}})
 
-    def initialize()
-      @data = uninitialized UInt8[{{size}}]
-      value = SecureRandom.random_bytes({{size}})
-      {{size}}.times do |i|
-        @data[i] = value[i]
-      end
-    end
-
-    def to_unsafe
-      @data
-    end
-
-    def to_pointer
-      @data.to_unsafe
-    end
-    def to_slice
-      @data.to_slice
-    end
-    def self.size
-      {{size}}
-    end
-  end
-end
-
-macro just_record(name, size, *, default_init = false)
-  struct {{name}}
-    @data : StaticArray(UInt8, {{size}})
-    {% if default_init %}
-      def initialize()
-        @data = StaticArray(UInt8, {{size}}).new(0_u8)
-      end
-    {% end %}
-    def to_unsafe
-      @data
-    end
-    def self.size
-      {{size}}
-    end
-  end
-end
-
-random_record(SymmetricKey, 32)
-random_record(Salt, 16)
-random_record(Nonce, 24)
-just_record(Header, 16, default_init: true)
-random_record(SecretKey, 32)
-just_record(PublicKey, 32)
+StaticRecord.declare(SymmetricKey, 32, :random)
+StaticRecord.declare(Salt, 16, :random)
+StaticRecord.declare(Nonce, 24, :random)
+StaticRecord.declare(Header, 16, :zero)
+StaticRecord.declare(SecretKey, 32, :random)
+StaticRecord.declare(PublicKey, 32, :none)
 
 struct SecretKey
   def initialize(*, password : String, salt : Salt)

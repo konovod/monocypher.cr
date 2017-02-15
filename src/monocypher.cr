@@ -3,7 +3,7 @@ require "./monocypher/*"
 
 
 module Crypto
-  MUCH_MB = 1
+  MUCH_MB = 50
 
 
 StaticRecord.declare(SymmetricKey, 32, :random)

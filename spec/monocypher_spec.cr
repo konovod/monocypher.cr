@@ -2,7 +2,17 @@ require "./spec_helper"
 
 describe Crypto do
 
-  it "hashes password, compare buffers" do
+  it "compare buffers" do
+    salt1 = Crypto::Salt.new
+    salt2 = salt1
+    salt3 = Crypto::Salt.new
+    nonce = Crypto::Nonce.new
+    salt1.compare(salt2).should be_true
+    salt1.compare(salt3).should be_false
+    salt1.compare(nonce).should be_false
+  end
+
+  it "hashes password" do
     pass = "12345678"
     salt = Crypto::Salt.new
     key1 = Crypto::SecretKey.new(password: pass, salt: salt)
@@ -10,10 +20,6 @@ describe Crypto do
     key3 = Crypto::SecretKey.new(password: "12345678z", salt: salt)
     key1.should eq key2
     key1.should_not eq key3
-
-    key1.compare(key2).should be_true
-    key1.compare(key3).should be_false
-    key1.compare(salt).should be_false
   end
 
   it "generate public keys" do
@@ -75,6 +81,16 @@ describe Crypto do
 
     ciphertext.to_unsafe[29] += 1
     Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_false
-end
+  end
+
+  it "rerolls random keys to avoid reallocation" do
+    nonce = Crypto::Nonce.new
+    nonce2 = nonce
+    nonce2.compare(nonce).should be_true
+    nonce2.reroll
+    nonce2.compare(nonce).should be_false
+    nonce.reroll
+    nonce2.compare(nonce).should be_false
+  end
 
 end

@@ -11,12 +11,14 @@ module StaticRecord
         end
       {% end %}
       {% if initialization == :random %}
+      def reroll
+        value = SecureRandom.random_bytes({{size}})
+        @data.to_unsafe.copy_from(value.to_unsafe, {{size}})
+      end
+
       def initialize()
         @data = uninitialized UInt8[{{size}}]
-        value = SecureRandom.random_bytes({{size}})
-        {{size}}.times do |i|
-          @data[i] = value[i]
-        end
+        reroll
       end
       {% end %}
 

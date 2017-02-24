@@ -1,21 +1,23 @@
-
-#generated with https://github.com/crystal-lang/crystal_lib
+# generated with https://github.com/crystal-lang/crystal_lib
 @[Link("monocypher")]
 lib LibMonoCypher
   fun memcmp = crypto_memcmp(p1 : Uint8T*, p2 : Uint8T*, n : LibC::SizeT) : LibC::Int
   alias Uint8T = UInt8
   fun chacha20_h = crypto_chacha20_H(out : Uint8T[32], key : Uint8T[32], in : Uint8T[16])
   fun chacha20_init = crypto_chacha20_init(ctx : ChachaCtx*, key : Uint8T[32], nonce : Uint8T[8])
+
   struct ChachaCtx
     input : Uint32T[16]
     random_pool : Uint8T[64]
     pool_index : Uint8T
   end
+
   alias Uint32T = LibC::UInt
   fun chacha20_xinit = crypto_chacha20_Xinit(ctx : ChachaCtx*, key : Uint8T[32], nonce : Uint8T[24])
   fun chacha20_encrypt = crypto_chacha20_encrypt(ctx : ChachaCtx*, plain_text : Uint8T*, cipher_text : Uint8T*, message_size : LibC::SizeT)
   fun chacha20_random = crypto_chacha20_random(ctx : ChachaCtx*, cipher_text : Uint8T*, message_size : LibC::SizeT)
   fun poly1305_init = crypto_poly1305_init(ctx : Poly1305Ctx*, key : Uint8T[32])
+
   struct Poly1305Ctx
     r : Uint32T[4]
     h : Uint32T[5]
@@ -23,10 +25,12 @@ lib LibMonoCypher
     pad : Uint32T[5]
     c_index : LibC::SizeT
   end
+
   fun poly1305_update = crypto_poly1305_update(ctx : Poly1305Ctx*, m : Uint8T*, bytes : LibC::SizeT)
   fun poly1305_finish = crypto_poly1305_finish(ctx : Poly1305Ctx*, mac : Uint8T[16])
   fun poly1305_auth = crypto_poly1305_auth(mac : Uint8T[16], msg : Uint8T*, msg_length : LibC::SizeT, key : Uint8T[32])
   fun blake2b_general_init = crypto_blake2b_general_init(ctx : Blake2bCtx*, outlen : LibC::SizeT, key : Uint8T*, keylen : LibC::SizeT)
+
   struct Blake2bCtx
     buf : Uint8T[128]
     hash : Uint64T[8]
@@ -34,6 +38,7 @@ lib LibMonoCypher
     c : Uint8T
     output_size : Uint8T
   end
+
   alias Uint64T = LibC::ULong
   fun blake2b_init = crypto_blake2b_init(ctx : Blake2bCtx*)
   fun blake2b_update = crypto_blake2b_update(ctx : Blake2bCtx*, in : Uint8T*, inlen : LibC::SizeT)

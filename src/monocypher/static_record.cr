@@ -1,6 +1,4 @@
-
 module StaticRecord
-
   macro declare(name, size, initialization = :none)
     struct {{name}}
       @data : StaticArray(UInt8, {{size}})
@@ -41,5 +39,4 @@ module StaticRecord
       end
     end
   end
-
 end

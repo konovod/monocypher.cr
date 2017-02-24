@@ -1,7 +1,6 @@
 require "./spec_helper"
 
 describe Crypto do
-
   it "compare buffers" do
     salt1 = Crypto::Salt.new
     salt2 = salt1
@@ -38,7 +37,7 @@ describe Crypto do
     nonce = Crypto::Nonce.new
     message = "This is a test message русский текст"
     plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size+Crypto::Header.size+Crypto::Nonce.size)
+    ciphertext = Bytes.new(plaintext.size + Crypto::Header.size + Crypto::Nonce.size)
     Crypto.symmetric_encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
     result = Bytes.new(plaintext.size)
     Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_true
@@ -57,7 +56,7 @@ describe Crypto do
 
     message = "This is a test message русский текст"
     plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size+Crypto::Header.size+Crypto::Nonce.size)
+    ciphertext = Bytes.new(plaintext.size + Crypto::Header.size + Crypto::Nonce.size)
     Crypto.asymmetric_encrypt(your_secret: alice_secret, their_public: bob_public, nonce: nonce, input: plaintext, output: ciphertext)
     result = Bytes.new(plaintext.size)
     Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_true
@@ -73,7 +72,7 @@ describe Crypto do
 
     message = "This is a test message русский текст"
     plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size+Crypto::Header.size+Crypto::SecretKey.size)
+    ciphertext = Bytes.new(plaintext.size + Crypto::Header.size + Crypto::SecretKey.size)
     Crypto.asymmetric_encrypt(their_public: bob_public, input: plaintext, output: ciphertext)
     result = Bytes.new(plaintext.size)
     Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
@@ -92,5 +91,4 @@ describe Crypto do
     nonce.reroll
     nonce2.compare(nonce).should be_false
   end
-
 end

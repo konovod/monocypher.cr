@@ -20,6 +20,19 @@ module StaticRecord
       end
       {% end %}
 
+      def initialize(s : String)
+        @data = uninitialized UInt8[{{size}}]
+        required_length = 2*{{size}}
+        raise "string size should be #{required_length}, not #{s.size}" if s.size != required_length
+        if s.responds_to? :hexbytes
+          values = s.hexbytes
+        else
+          values = s.chars.in_groups_of(2,'0').map{|(x,y)| (x.to_i(16)*16+y.to_i(16)).to_u8}
+        end
+        @data.to_unsafe.copy_from(values.to_unsafe, {{size}})
+      end
+
+
       def to_unsafe
         @data
       end
@@ -37,6 +50,7 @@ module StaticRecord
       def self.size
         {{size}}
       end
+
     end
   end
 end

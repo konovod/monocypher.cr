@@ -32,6 +32,20 @@ describe Crypto do
     public1.should_not eq secret1
   end
 
+  it "read keys from string" do
+    secret = Crypto::SecretKey.new("5f5ade01649f59af5de9310fb967966e5c4715fff4ed8c41cd229a618f268872")
+    public = Crypto::PublicKey.new("f239af4eaf613180def4bef6b0e80a8f7c7506e8a3722d1b1a04239812221704")
+    public.should eq Crypto::PublicKey.new(secret: secret)
+    wrong = Crypto::PublicKey.new("f239af4eaf613180def4bef6b0e80a8f7c7506e8a3722d1b1a04239812221714")
+    wrong.should_not eq Crypto::PublicKey.new(secret: secret)
+    expect_raises(Exception) do
+      Crypto::PublicKey.new("f239af4eaf6_13180def4bef6b0e80a8f7c7506e8a3722d1b1a0423981222171")
+    end
+    expect_raises(Exception) do
+      Crypto::PublicKey.new("f239af4eaf6")
+    end
+  end
+
   it "does symmetric cryptography" do
     key = Crypto::SymmetricKey.new
     nonce = Crypto::Nonce.new

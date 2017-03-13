@@ -60,6 +60,23 @@ describe Crypto do
     shared1.should_not eq shared3
   end
 
+  it "sign messages" do
+    secret1 = Crypto::SecretKey.new
+    public1 = Crypto::PublicKey.new(secret: secret1)
+    secret2 = Crypto::SecretKey.new
+    public2 = Crypto::PublicKey.new(secret: secret2)
+
+    message = "12345678"
+    signature1 = Crypto::Signature.new(message, secret: secret1, public: public1)
+    signature11 = Crypto::Signature.new(message, secret: secret1)
+    signature2 = Crypto::Signature.new(message, secret: secret2, public: public1)
+
+    signature1.should eq signature11
+    signature1.check("12345678", public: public1).should be_true
+    signature1.check("123456789", public: public1).should be_false
+    signature2.check("12345678", public: public1).should be_false
+  end
+
   #
   # it "does symmetric cryptography" do
   #   key = Crypto::SymmetricKey.new

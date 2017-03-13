@@ -86,7 +86,7 @@ describe Crypto do
     key = Crypto::SymmetricKey.new
     nonce = Crypto::Nonce.new
     message = "This is a test message русский текст"
-    plaintext = message.bytes
+    plaintext = message.to_slice
     ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_SYMMETRIC)
     Crypto.encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
     result = Bytes.new(plaintext.size)
@@ -95,6 +95,21 @@ describe Crypto do
 
     ciphertext.to_unsafe[0] += 1
     Crypto.decrypt(key: key, input: ciphertext, output: result).should be_false
+  end
+
+  it "does symmetric cryptography with additional data" do
+    key = Crypto::SymmetricKey.new
+    nonce = Crypto::Nonce.new
+    message = "This is a test message русский текст".to_slice
+    additional = "Some additional data дополнительные данные".to_slice
+    ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC + additional.size)
+    Crypto.encrypt(key: key, nonce: nonce, input: message, output: ciphertext, additional: additional)
+
+    result = Bytes.new(message.size)
+    res_add = Bytes.new(additional.size)
+    Crypto.decrypt(key: key, input: ciphertext, output: result, additional: res_add).should be_true
+    result.should eq message
+    res_add.should eq additional
   end
 
   # it "does one pair asymmetric cryptography" do

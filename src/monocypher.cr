@@ -70,42 +70,42 @@ module Crypto
   end
 
   # adds nonce to the packet
-  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input)
+  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input : Bytes) : Nil
     raise "data sizes doesn't match" if input.size + OVERHEAD_SYMMETRIC != output.size
     LibMonoCypher.lock(output[Nonce.size, Header.size + input.size], key, nonce, input, input.size)
     output[0, Nonce.size].copy_from(nonce.to_slice)
   end
 
-  def self.decrypt(*, output : Bytes, key : SymmetricKey, input) : Bool
+  def self.decrypt(*, output : Bytes, key : SymmetricKey, input : Bytes) : Bool
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
     return LibMonoCypher.unlock(output, key, input[0, Nonce.size], input[Nonce.size, Header.size + output.size], output.size + Header.size) == 0
   end
 
   #  adds additional data to the packet, receiver should know their size
-  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input, additional)
+  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input : Bytes, additional : Bytes) : Nil
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC + additional.size
     LibMonoCypher.aead_lock(
       output[Nonce.size + additional.size, Header.size],
       output[Nonce.size + additional.size + Header.size, input.size],
       key,
       nonce,
-      additional,
-      additional.size,
-      input,
-      input.size)
+      additional, additional.size,
+      input, input.size)
     output[0, Nonce.size].copy_from(nonce.to_slice)
-    output[Nonce.size, additional.size].copy_from(additional.to_slice)
+    output[Nonce.size, additional.size].copy_from(additional)
   end
 
-  def self.decrypt(*, output : Bytes, additional : Bytes, additional_size : Int32, key : SymmetricKey, input) : Bool
-    raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC + additional_size
-    return LibMonoCypher.aead_unlock(
+  def self.decrypt(*, output : Bytes, additional : Bytes, key : SymmetricKey, input) : Bool
+    raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC + additional.size
+    ok = LibMonoCypher.aead_unlock(
       output,
       key,
       input[0, Nonce.size],
-      input[Nonce.size + additional_size, Header.size],
-      input[Nonce.size, additional_size], additional_size,
-      input[Nonce.size + additional_size + Header.size, output.size]) == 0
+      input[Nonce.size + additional.size, Header.size],
+      input[Nonce.size, additional.size], additional.size,
+      input[Nonce.size + additional.size + Header.size, output.size], output.size) == 0
+    additional.copy_from(input[Nonce.size, additional.size]) if ok
+    return ok
   end
 
   # asymmetric scheme: sender pass his public_key as additional data and sign it with shared secret

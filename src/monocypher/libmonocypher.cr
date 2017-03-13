@@ -52,8 +52,8 @@ lib LibMonoCypher
   fun sign = crypto_sign(signature : Uint8T[64], secret_key : Uint8T[32], public_key : Uint8T[32], message : Uint8T*, message_size : LibC::Int)
   fun check = crypto_check(signature : Uint8T[64], public_key : Uint8T[32], message : Uint8T*, message_size : LibC::Int) : LibC::Int
   fun key_exchange = crypto_key_exchange(shared_key : Uint8T[32], your_secret_key : Uint8T[32], their_public_key : Uint8T[32]) : LibC::Int
-  fun aead_lock = crypto_aead_lock(mac : Uint8T[16], ciphertext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : LibC::Int, plaintext : Uint8T*, text_size : LibC::Int)
-  fun aead_unlock = crypto_aead_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : LibC::Int, ciphertext : Uint8T*, text_size : LibC::Int) : LibC::Int
+  fun aead_lock = crypto_aead_lock(mac : Uint8T*, ciphertext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : LibC::Int, plaintext : Uint8T*, text_size : LibC::Int)
+  fun aead_unlock = crypto_aead_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, ad : Uint8T*, ad_size : LibC::Int, ciphertext : Uint8T*, text_size : LibC::Int) : LibC::Int
   fun lock = crypto_lock(box : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plaintext : Uint8T*, text_size : LibC::Int)
   fun unlock = crypto_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T*, box : Uint8T*, box_size : LibC::Int) : LibC::Int
 end

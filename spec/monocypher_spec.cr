@@ -102,14 +102,15 @@ describe Crypto do
     nonce = Crypto::Nonce.new
     message = "This is a test message русский текст".to_slice
     additional = "Some additional data дополнительные данные".to_slice
-    ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC + additional.size)
+    ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC)
     Crypto.encrypt(key: key, nonce: nonce, input: message, output: ciphertext, additional: additional)
 
     result = Bytes.new(message.size)
-    res_add = Bytes.new(additional.size)
-    Crypto.decrypt(key: key, input: ciphertext, output: result, additional: res_add).should be_true
+    Crypto.decrypt(key: key, input: ciphertext, output: result, additional: additional).should be_true
     result.should eq message
-    res_add.should eq additional
+
+    wrong = "wrong additional data".to_slice
+    Crypto.decrypt(key: key, input: ciphertext, output: result, additional: wrong).should be_false
   end
 
   # it "does one pair asymmetric cryptography" do

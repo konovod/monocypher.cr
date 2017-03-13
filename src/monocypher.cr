@@ -70,8 +70,9 @@ module Crypto
   end
 
   # adds nonce to the packet
-  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input : Bytes) : Nil
+  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce? = nil, input : Bytes) : Nil
     raise "data sizes doesn't match" if input.size + OVERHEAD_SYMMETRIC != output.size
+    nonce = Nonce.new unless nonce
     LibMonoCypher.lock(output[Nonce.size, Header.size + input.size], key, nonce, input, input.size)
     output[0, Nonce.size].copy_from(nonce.to_slice)
   end
@@ -81,8 +82,9 @@ module Crypto
     return LibMonoCypher.unlock(output, key, input[0, Nonce.size], input[Nonce.size, Header.size + output.size], output.size + Header.size) == 0
   end
 
-  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input : Bytes, additional : Bytes) : Nil
+  def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce? = nil, input : Bytes, additional : Bytes) : Nil
     raise "data sizes doesn't match" if output.size != input.size + OVERHEAD_SYMMETRIC
+    nonce = Nonce.new unless nonce
     LibMonoCypher.aead_lock(
       output[Nonce.size, Header.size],
       output[Nonce.size + Header.size, input.size],

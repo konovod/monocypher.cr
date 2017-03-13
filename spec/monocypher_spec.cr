@@ -87,11 +87,10 @@ describe Crypto do
 
   it "does symmetric cryptography" do
     key = Crypto::SymmetricKey.new
-    nonce = Crypto::Nonce.new
     message = "This is a test message русский текст"
     plaintext = message.to_slice
     ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_SYMMETRIC)
-    Crypto.encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
+    Crypto.encrypt(key: key, input: plaintext, output: ciphertext)
     result = Bytes.new(plaintext.size)
     Crypto.decrypt(key: key, input: ciphertext, output: result).should be_true
     String.new(result).should eq message

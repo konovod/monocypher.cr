@@ -1,18 +1,22 @@
 require "./spec_helper"
 
 describe "LibMonoCypher" do
-  # status |= generic_test(equal, "vectors_test_equal", 2);
-  # status |= generic_test(diff , "vectors_test_diff" , 2);
-  # status |= test(chacha20,  "vectors_chacha20", 2);
-  # status |= test(blake2b ,  "vectors_blake2b" , 2);
-  # status |= test(poly1305,  "vectors_poly1305", 2);
-  # status |= test(argon2i ,  "vectors_argon2i" , 6);
-  # status |= test(x25519  ,  "vectors_x25519"  , 2);
-  # status |= test(sha512  ,  "vectors_sha512"  , 1);
-  # status |= test(ed25519 ,  "vectors_ed25519" , 3);
+  # translated from monocypher test.c
+  # not covered:
+  # status |= test(chacha20     , "vectors_chacha20"    , 2);
+  # status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
+  # status |= test(xchacha20    , "vectors_x_chacha20"  , 2);
+  # status |= test(blake2b      , "vectors_blake2b"     , 2);
+  # status |= test(blake2b_easy , "vectors_blake2b_easy", 1);
+  # status |= test(poly1305     , "vectors_poly1305"    , 2);
+  # status |= test(argon2i      , "vectors_argon2i"     , 6);
+  # status |= test(x25519       , "vectors_x25519"      , 2);
+  # status |= test(key_exchange , "vectors_key_exchange", 2);
+  # status |= test(sha512       , "vectors_sha512"      , 1);
+  # status |= test(ed25519_key  , "vectors_ed25519_key" , 1);
+  # status |= test(ed25519_sign1, "vectors_ed25519_sign", 3);
+  # status |= test(ed25519_sign2, "vectors_ed25519_sign", 3);
   # status |= test_x25519();
-  # status |= test_ae();
-  # status |= test_lock();
 
   it "memcmp" do
     ptr1 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
@@ -22,33 +26,33 @@ describe "LibMonoCypher" do
     LibMonoCypher.memcmp(ptr1, ptr3, 9).should_not eq 0
   end
 
-  it "test_ae" do
+  it "test_aead" do
     key = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7)
-    nonce = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7)
-    plaintext = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7)
+    nonce = UInt8.static_array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+    ad = UInt8.static_array(3, 2, 1, 0)
+    plaintext = UInt8.static_array(7, 6, 5, 4, 3, 2, 1, 0)
     box = StaticArray(UInt8, 24).new(0_u8)
+    mac = StaticArray(UInt8, 16).new(0_u8)
+    smallbox = StaticArray(UInt8, 8).new(0_u8)
     aout = StaticArray(UInt8, 24).new(0_u8)
-    LibMonoCypher.ae_lock(box, key, nonce, plaintext, 8)          # make true message
-    LibMonoCypher.ae_unlock(aout, key, nonce, box, 8).should eq 0 # accept true message
-    LibMonoCypher.memcmp(aout, plaintext, 8).should eq 0          # roundtrip
-    box[0] += 1
-    LibMonoCypher.ae_unlock(aout, key, nonce, box, 8).should_not eq 0 # reject forgery
-  end
+    # AEAD roundtrip
+    LibMonoCypher.aead_lock(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
+    LibMonoCypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
+    LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
+    mac[0] += 1
+    LibMonoCypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
 
-  it "test_lock" do
-    rk = UInt8.static_array(1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0,
-      1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0)
-    sk = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7,
-      0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7)
-    pk = StaticArray(UInt8, 32).new(0_u8)
-    LibMonoCypher.x25519_public_key(pk, sk)
-    plaintext = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7)
-    box = StaticArray(UInt8, 56).new(0_u8)
-    aout = StaticArray(UInt8, 8).new(56_u8)
-    LibMonoCypher.anonymous_lock(box, rk, pk, plaintext, 8)
-    LibMonoCypher.anonymous_unlock(aout, sk, box, 8).should eq 0
-    LibMonoCypher.memcmp(aout, plaintext, 8).should eq 0
-    box[32] += 1
-    LibMonoCypher.anonymous_unlock(aout, sk, box, 8).should_not eq 0
+    # Authenticated roundtrip (easy interface)
+    LibMonoCypher.lock(box, key, nonce, plaintext, 8)
+    LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should eq 0
+    LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
+    box[0] += 1
+    LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should_not eq 0
+    box[0] -= 1
+
+    # Same result for both interfaces
+    LibMonoCypher.aead_lock(mac, smallbox, key, nonce, nil, 0, plaintext, 8)
+    LibMonoCypher.memcmp(mac, box, 16).should eq 0
+    LibMonoCypher.memcmp(smallbox, box.to_slice[16, 8], 8).should eq 0
   end
 end

@@ -45,6 +45,21 @@ describe Crypto do
       Crypto::PublicKey.new("f239af4eaf6")
     end
   end
+
+  it "generate shared secret" do
+    secret1 = Crypto::SecretKey.new
+    secret2 = Crypto::SecretKey.new
+    public1 = Crypto::PublicKey.new(secret: secret1)
+    public2 = Crypto::PublicKey.new(secret: secret2)
+
+    shared1 = Crypto::SymmetricKey.new(secret: secret1, public: public2)
+    shared2 = Crypto::SymmetricKey.new(secret: secret2, public: public1)
+    shared3 = Crypto::SymmetricKey.new(secret: secret1, public: public1)
+
+    shared1.should eq shared2
+    shared1.should_not eq shared3
+  end
+
   #
   # it "does symmetric cryptography" do
   #   key = Crypto::SymmetricKey.new

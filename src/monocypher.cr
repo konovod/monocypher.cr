@@ -34,6 +34,14 @@ module Crypto
     end
   end
 
+  struct SymmetricKey
+    def initialize(*, secret : SecretKey, public : PublicKey)
+      @data = uninitialized UInt8[32]
+      result = LibMonoCypher.key_exchange(@data, secret, public)
+      raise "can't generate public key" unless result == 0
+    end
+  end
+
   def self.symmetric_encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce, input)
     raise "data sizes doesn't match" if input.size + OVERHEAD_SYMMETRIC != output.size
     LibMonoCypher.ae_lock(output[Nonce.size, Header.size + input.size], key, nonce, input, input.size)

@@ -1,5 +1,7 @@
 # monocypher
 
+WIP! UPDATING to monocypher 0.5 incomplete
+
 Crystal wrapper for a cryptographic library Monocypher (http://loup-vaillant.fr/projects/monocypher/)
 For internal use (as this cryptographic library wasn't reviewed yet and so can't be recommended to use), exporting to github to simplify deployment
 

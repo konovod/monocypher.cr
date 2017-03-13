@@ -44,9 +44,9 @@ module Crypto
   end
 
   struct SymmetricKey
-    def initialize(*, secret : SecretKey, public : PublicKey)
+    def initialize(*, our_secret : SecretKey, their_public : PublicKey)
       @data = uninitialized UInt8[32]
-      result = LibMonoCypher.key_exchange(@data, secret, public)
+      result = LibMonoCypher.key_exchange(@data, our_secret, their_public)
       raise "can't generate public key" unless result == 0
     end
   end
@@ -104,22 +104,5 @@ module Crypto
       input[Nonce.size + Header.size, output.size], output.size) == 0
   end
 
-  # asymmetric scheme: sender pass his public_key as additional data and sign it with shared secret
-  # receiver generate shared secret with received key and check all message with it
-
-  # def self.asymmetric_encrypt(*, output : Bytes, our_public: PublicKey, their_public : PublicKey, input)
-  #   raise "data sizes doesn't match" if input.size + OVERHEAD_ANONYMOUS != output.size
-  #   random_secret = SecretKey.new
-  #   LibMonoCypher.anonymous_lock(output, random_secret, their_public, input, input.size)
-  # end
-  #
-  # def self.asymmetric_decrypt(*, output : Bytes, your_secret : SecretKey, input) : PublicKey?
-  #   raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_ANONYMOUS
-  #
-  #   return LibMonoCypher.anonymous_unlock(output, your_secret, input, output.size) == 0
-  # end
-
   OVERHEAD_SYMMETRIC = Header.size + Nonce.size
-  # OVERHEAD_ASYMMETRIC = Header.size + Nonce.size
-  # OVERHEAD_ANONYMOUS = Header.size + Nonce.size + PublicKey.size
 end

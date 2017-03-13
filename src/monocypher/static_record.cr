@@ -32,6 +32,12 @@ module StaticRecord
         @data.to_unsafe.copy_from(values.to_unsafe, {{size}})
       end
 
+      def initialize(*, raw : Bytes)
+        raise "bytes size should be #{ {{size}} }, not #{raw.size}" if raw.size != {{size}}
+        @data = uninitialized UInt8[{{size}}]
+        @data.to_unsafe.copy_from(raw.to_unsafe, {{size}})
+      end
+
 
       def to_unsafe
         @data

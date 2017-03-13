@@ -44,6 +44,9 @@ describe Crypto do
     expect_raises(Exception) do
       Crypto::PublicKey.new("f239af4eaf6")
     end
+    expect_raises(Exception) do
+      Crypto::PublicKey.new("f239af4eaf613180def4bef6b0e80a8f7c7506e8a3722d1b1a0423981222171400")
+    end
   end
 
   it "generate shared secret" do
@@ -52,16 +55,16 @@ describe Crypto do
     public1 = Crypto::PublicKey.new(secret: secret1)
     public2 = Crypto::PublicKey.new(secret: secret2)
 
-    shared1 = Crypto::SymmetricKey.new(secret: secret1, public: public2)
-    shared2 = Crypto::SymmetricKey.new(secret: secret2, public: public1)
-    shared3 = Crypto::SymmetricKey.new(secret: secret1, public: public1)
+    shared1 = Crypto::SymmetricKey.new(our_secret: secret1, their_public: public2)
+    shared2 = Crypto::SymmetricKey.new(our_secret: secret2, their_public: public1)
+    shared3 = Crypto::SymmetricKey.new(our_secret: secret1, their_public: public1)
 
     shared1.should eq shared2
     shared1.should_not eq shared3
 
     public_bad = Crypto::PublicKey.new("0000000000000000000000000000000000000000000000000000000000000000")
     expect_raises(Exception) do
-      Crypto::SymmetricKey.new(secret: secret1, public: public_bad)
+      Crypto::SymmetricKey.new(our_secret: secret1, their_public: public_bad)
     end
   end
 
@@ -113,21 +116,47 @@ describe Crypto do
     Crypto.decrypt(key: key, input: ciphertext, output: result, additional: wrong).should be_false
   end
 
-  # it "does one pair asymmetric cryptography" do
-  #   bob_secret = Crypto::SecretKey.new
-  #   bob_public = Crypto::PublicKey.new(secret: bob_secret)
-  #
-  #   message = "This is a test message русский текст"
-  #   plaintext = message.bytes
-  #   ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_ANONYMOUS)
-  #   Crypto.asymmetric_encrypt(their_public: bob_public, input: plaintext, output: ciphertext)
-  #   result = Bytes.new(plaintext.size)
-  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
-  #   String.new(result).should eq message
-  #
-  #   ciphertext.to_unsafe[29] += 1
-  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_false
-  # end
+  it "complex schemes can be implemented" do
+    server_secret = Crypto::SecretKey.new
+    server_public = Crypto::PublicKey.new(secret: server_secret)
+
+    channel = Channel(Bytes).new # of cource should be fixed size in real apps
+
+    # client pass its public key as additional data
+    spawn do
+      client_secret = Crypto::SecretKey.new
+      client_public = Crypto::PublicKey.new(secret: client_secret)
+      client_shared = Crypto::SymmetricKey.new(our_secret: client_secret, their_public: server_public)
+      message = "my_login".to_slice
+      ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC)
+      add_data = client_public.to_slice
+      Crypto.encrypt(key: client_shared, nonce: Crypto::Nonce.new, input: message, output: ciphertext, additional: add_data)
+
+      channel.send ciphertext
+      channel.send add_data
+
+      response = channel.receive
+      decoded = Bytes.new(response.size - Crypto::OVERHEAD_SYMMETRIC)
+      Crypto.decrypt(key: client_shared, input: response, output: decoded)
+      String.new(decoded).should eq "Hello, my_login"
+    end
+
+    # server receives key and answers to client
+    spawn do
+      ciphertext = channel.receive
+      req_key = channel.receive
+      server_shared = Crypto::SymmetricKey.new(
+        our_secret: server_secret,
+        their_public: Crypto::PublicKey.new(raw: req_key))
+      request_decoded = Bytes.new(ciphertext.size - Crypto::OVERHEAD_SYMMETRIC)
+      Crypto.decrypt(key: server_shared, input: ciphertext, output: request_decoded, additional: req_key)
+      String.new(request_decoded).should eq "my_login"
+      answer = "Hello, my_login".to_slice
+      ciphertext = Bytes.new(answer.size + Crypto::OVERHEAD_SYMMETRIC)
+      Crypto.encrypt(key: server_shared, nonce: Crypto::Nonce.new, input: answer, output: ciphertext)
+      channel.send ciphertext
+    end
+  end
 
   it "rerolls random keys to avoid reallocation" do
     nonce = Crypto::Nonce.new

@@ -62,9 +62,9 @@ describe Crypto do
 
   it "sign messages" do
     secret1 = Crypto::SecretKey.new
-    public1 = Crypto::PublicKey.new(secret: secret1)
+    public1 = Crypto::PublicSigningKey.new(secret: secret1)
     secret2 = Crypto::SecretKey.new
-    public2 = Crypto::PublicKey.new(secret: secret2)
+    public2 = Crypto::PublicSigningKey.new(secret: secret2)
 
     message = "12345678"
     signature1 = Crypto::Signature.new(message, secret: secret1, public: public1)

@@ -10,6 +10,7 @@ module Crypto
   StaticRecord.declare(Header, 16, :zero)
   StaticRecord.declare(SecretKey, 32, :random)
   StaticRecord.declare(PublicKey, 32, :none)
+  StaticRecord.declare(PublicSigningKey, 32, :none)
   StaticRecord.declare(Signature, 64, :none)
 
   struct SecretKey
@@ -35,6 +36,13 @@ module Crypto
     end
   end
 
+  struct PublicSigningKey
+    def initialize(*, secret : SecretKey)
+      @data = uninitialized UInt8[32]
+      LibMonoCypher.sign_public_key(@data, secret)
+    end
+  end
+
   struct SymmetricKey
     def initialize(*, secret : SecretKey, public : PublicKey)
       @data = uninitialized UInt8[32]
@@ -44,18 +52,19 @@ module Crypto
   end
 
   struct Signature
-    def initialize(message, *, secret : SecretKey, public : PublicKey)
+    def initialize(message, *, secret : SecretKey, public : PublicSigningKey)
       @data = uninitialized UInt8[64]
       LibMonoCypher.sign(@data, secret, public, message, message.size)
     end
 
     def initialize(message, *, secret : SecretKey)
       @data = uninitialized UInt8[64]
-      public = PublicKey.new(secret: secret)
+      public = PublicSigningKey.new(secret: secret)
+      LibMonoCypher.sign_public_key(public, secret)
       LibMonoCypher.sign(@data, secret, public, message, message.size)
     end
 
-    def check(message, *, public : PublicKey) : Bool
+    def check(message, *, public : PublicSigningKey) : Bool
       LibMonoCypher.check(@data, public, message, message.size) == 0
     end
   end

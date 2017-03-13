@@ -55,5 +55,5 @@ lib LibMonoCypher
   fun aead_lock = crypto_aead_lock(mac : Uint8T[16], ciphertext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : LibC::Int, plaintext : Uint8T*, text_size : LibC::Int)
   fun aead_unlock = crypto_aead_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : LibC::Int, ciphertext : Uint8T*, text_size : LibC::Int) : LibC::Int
   fun lock = crypto_lock(box : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plaintext : Uint8T*, text_size : LibC::Int)
-  fun unlock = crypto_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], box : Uint8T*, box_size : LibC::Int) : LibC::Int
+  fun unlock = crypto_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T*, box : Uint8T*, box_size : LibC::Int) : LibC::Int
 end

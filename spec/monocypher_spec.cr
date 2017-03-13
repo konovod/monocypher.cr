@@ -45,56 +45,56 @@ describe Crypto do
       Crypto::PublicKey.new("f239af4eaf6")
     end
   end
-
-  it "does symmetric cryptography" do
-    key = Crypto::SymmetricKey.new
-    nonce = Crypto::Nonce.new
-    message = "This is a test message русский текст"
-    plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_SYMMETRIC)
-    Crypto.symmetric_encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
-    result = Bytes.new(plaintext.size)
-    Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_true
-    String.new(result).should eq message
-
-    ciphertext.to_unsafe[0] += 1
-    Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_false
-  end
-
-  it "does asymmetric cryptography" do
-    alice_secret = Crypto::SecretKey.new
-    alice_public = Crypto::PublicKey.new(secret: alice_secret)
-    bob_secret = Crypto::SecretKey.new
-    bob_public = Crypto::PublicKey.new(secret: bob_secret)
-    nonce = Crypto::Nonce.new
-
-    message = "This is a test message русский текст"
-    plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_ASYMMETRIC)
-    Crypto.asymmetric_encrypt(your_secret: alice_secret, their_public: bob_public, nonce: nonce, input: plaintext, output: ciphertext)
-    result = Bytes.new(plaintext.size)
-    Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_true
-    String.new(result).should eq message
-
-    ciphertext.to_unsafe[13] += 1
-    Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_false
-  end
-
-  it "does one pair asymmetric cryptography" do
-    bob_secret = Crypto::SecretKey.new
-    bob_public = Crypto::PublicKey.new(secret: bob_secret)
-
-    message = "This is a test message русский текст"
-    plaintext = message.bytes
-    ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_ANONYMOUS)
-    Crypto.asymmetric_encrypt(their_public: bob_public, input: plaintext, output: ciphertext)
-    result = Bytes.new(plaintext.size)
-    Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
-    String.new(result).should eq message
-
-    ciphertext.to_unsafe[29] += 1
-    Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_false
-  end
+  #
+  # it "does symmetric cryptography" do
+  #   key = Crypto::SymmetricKey.new
+  #   nonce = Crypto::Nonce.new
+  #   message = "This is a test message русский текст"
+  #   plaintext = message.bytes
+  #   ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_SYMMETRIC)
+  #   Crypto.symmetric_encrypt(key: key, nonce: nonce, input: plaintext, output: ciphertext)
+  #   result = Bytes.new(plaintext.size)
+  #   Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_true
+  #   String.new(result).should eq message
+  #
+  #   ciphertext.to_unsafe[0] += 1
+  #   Crypto.symmetric_decrypt(key: key, input: ciphertext, output: result).should be_false
+  # end
+  #
+  # it "does asymmetric cryptography" do
+  #   alice_secret = Crypto::SecretKey.new
+  #   alice_public = Crypto::PublicKey.new(secret: alice_secret)
+  #   bob_secret = Crypto::SecretKey.new
+  #   bob_public = Crypto::PublicKey.new(secret: bob_secret)
+  #   nonce = Crypto::Nonce.new
+  #
+  #   message = "This is a test message русский текст"
+  #   plaintext = message.bytes
+  #   ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_ASYMMETRIC)
+  #   Crypto.asymmetric_encrypt(your_secret: alice_secret, their_public: bob_public, nonce: nonce, input: plaintext, output: ciphertext)
+  #   result = Bytes.new(plaintext.size)
+  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_true
+  #   String.new(result).should eq message
+  #
+  #   ciphertext.to_unsafe[13] += 1
+  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, their_public: alice_public, input: ciphertext, output: result).should be_false
+  # end
+  #
+  # it "does one pair asymmetric cryptography" do
+  #   bob_secret = Crypto::SecretKey.new
+  #   bob_public = Crypto::PublicKey.new(secret: bob_secret)
+  #
+  #   message = "This is a test message русский текст"
+  #   plaintext = message.bytes
+  #   ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_ANONYMOUS)
+  #   Crypto.asymmetric_encrypt(their_public: bob_public, input: plaintext, output: ciphertext)
+  #   result = Bytes.new(plaintext.size)
+  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_true
+  #   String.new(result).should eq message
+  #
+  #   ciphertext.to_unsafe[29] += 1
+  #   Crypto.asymmetric_decrypt(your_secret: bob_secret, input: ciphertext, output: result).should be_false
+  # end
 
   it "rerolls random keys to avoid reallocation" do
     nonce = Crypto::Nonce.new

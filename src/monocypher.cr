@@ -13,9 +13,17 @@ module Crypto
 
   struct SecretKey
     def initialize(*, password : String, salt : Salt)
+      raise "minimal password length is 4, got#{password.size}" if password.size < 4
       @data = uninitialized UInt8[32]
       area = Pointer(UInt8).malloc(MUCH_MB*1024*1024)
-      LibMonoCypher.argon2i(@data, 32, password, password.size, salt.to_pointer, 16, nil, 0, nil, 0, area, MUCH_MB*1024, 10)
+      LibMonoCypher.argon2i(
+        @data, 32,
+        area, MUCH_MB*1024,
+        10,
+        password, password.size,
+        salt.to_pointer, 16,
+        nil, 0,
+        nil, 0)
     end
   end
 

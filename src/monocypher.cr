@@ -79,29 +79,33 @@ module Crypto
 
   def self.decrypt(*, output : Bytes, key : SymmetricKey, input : Bytes) : Bool
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
-    return LibMonoCypher.unlock(output, key, input[0, Nonce.size], input[Nonce.size, Header.size + output.size], output.size + Header.size) == 0
+    return LibMonoCypher.unlock(output, key, Nonce.from_bytes(input[0, Nonce.size]), input[Nonce.size, Header.size + output.size], output.size + Header.size) == 0
   end
 
   def self.encrypt(*, output : Bytes, key : SymmetricKey, nonce : Nonce? = nil, input : Bytes, additional : Bytes) : Nil
     raise "data sizes doesn't match" if output.size != input.size + OVERHEAD_SYMMETRIC
     nonce = Nonce.new unless nonce
+    mac = Header.new
     LibMonoCypher.aead_lock(
-      output[Nonce.size, Header.size],
+      mac,
       output[Nonce.size + Header.size, input.size],
       key,
       nonce,
       additional, additional.size,
       input, input.size)
     output[0, Nonce.size].copy_from(nonce.to_slice)
+    output[Nonce.size, Header.size].copy_from(mac.to_slice)
   end
 
   def self.decrypt(*, output : Bytes, additional : Bytes, key : SymmetricKey, input) : Bool
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
+    mac = Header.from_bytes input[Nonce.size, Header.size]
+    nonce = Nonce.from_bytes input[0, Nonce.size]
     return LibMonoCypher.aead_unlock(
       output,
       key,
-      input[0, Nonce.size],
-      input[Nonce.size, Header.size],
+      nonce,
+      mac,
       additional, additional.size,
       input[Nonce.size + Header.size, output.size], output.size) == 0
   end

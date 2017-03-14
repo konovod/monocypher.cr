@@ -146,7 +146,7 @@ describe Crypto do
       req_key = channel.receive
       server_shared = Crypto::SymmetricKey.new(
         our_secret: server_secret,
-        their_public: Crypto::PublicKey.new(raw: req_key))
+        their_public: Crypto::PublicKey.from_bytes(req_key))
       request_decoded = Bytes.new(ciphertext.size - Crypto::OVERHEAD_SYMMETRIC)
       Crypto.decrypt(key: server_shared, input: ciphertext, output: request_decoded, additional: req_key)
       String.new(request_decoded).should eq "my_login"

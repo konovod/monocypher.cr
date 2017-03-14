@@ -1,8 +1,8 @@
 # monocypher
 
-WIP! UPDATING to monocypher 0.5 incomplete
-
 Crystal wrapper for a cryptographic library Monocypher (http://loup-vaillant.fr/projects/monocypher/)
+
+Use `gcc -O2 -shared -o libmonocypher.so -fPIC monocypher.c` to generate .so file for linking with this wrapper
 
 ## Installation
 
@@ -19,7 +19,7 @@ dependencies:
 ```crystal
 require "monocypher"
 
-channel = Channel(Bytes).new
+channel = Channel(Bytes).new # should be fixed size in real apps
 
 alice_secret = Crypto::SecretKey.new
 alice_public = Crypto::PublicKey.new(secret: alice_secret)

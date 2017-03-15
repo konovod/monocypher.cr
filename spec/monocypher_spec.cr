@@ -101,11 +101,10 @@ describe Crypto do
 
   it "does symmetric cryptography with additional data" do
     key = Crypto::SymmetricKey.new
-    nonce = Crypto::Nonce.new
     message = "This is a test message русский текст".to_slice
     additional = "Some additional data дополнительные данные".to_slice
     ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC)
-    Crypto.encrypt(key: key, nonce: nonce, input: message, output: ciphertext, additional: additional)
+    Crypto.encrypt(key: key, input: message, output: ciphertext, additional: additional)
 
     result = Bytes.new(message.size)
     Crypto.decrypt(key: key, input: ciphertext, output: result, additional: additional).should be_true
@@ -129,7 +128,7 @@ describe Crypto do
       message = "my_login".to_slice
       ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC)
       add_data = client_public.to_slice
-      Crypto.encrypt(key: client_shared, nonce: Crypto::Nonce.new, input: message, output: ciphertext, additional: add_data)
+      Crypto.encrypt(key: client_shared, input: message, output: ciphertext, additional: add_data)
 
       channel.send ciphertext
       channel.send add_data
@@ -152,7 +151,7 @@ describe Crypto do
       String.new(request_decoded).should eq "my_login"
       answer = "Hello, my_login".to_slice
       ciphertext = Bytes.new(answer.size + Crypto::OVERHEAD_SYMMETRIC)
-      Crypto.encrypt(key: server_shared, nonce: Crypto::Nonce.new, input: answer, output: ciphertext)
+      Crypto.encrypt(key: server_shared, input: answer, output: ciphertext)
       channel.send ciphertext
     end
   end

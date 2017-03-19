@@ -1,6 +1,6 @@
 @[Link("monocypher")]
 lib LibMonoCypher
-  alias SizeT = Int64 # lol, crystal has sizet = 4 bytes???
+  alias SizeT = LibC::SizeT
 
   fun memcmp = crypto_memcmp(p1 : Uint8T*, p2 : Uint8T*, n : SizeT) : SizeT
   alias Uint8T = UInt8

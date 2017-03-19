@@ -10,8 +10,7 @@ module StaticRecord
       {% end %}
       {% if initialization == :random %}
       def reroll
-        value = SecureRandom.random_bytes({{size}})
-        @data.to_unsafe.copy_from(value.to_unsafe, {{size}})
+        SecureRandom.random_bytes(@data.to_slice)
       end
 
       def initialize()
@@ -26,7 +25,7 @@ module StaticRecord
         raise "string size should be #{required_length}, not #{s.size}" if s.size != required_length
         if s.responds_to? :hexbytes
           values = s.hexbytes
-        else
+        else #for Crystal version < 0.21
           values = s.chars.in_groups_of(2,'0').map{|(x,y)| (x.to_i(16)*16+y.to_i(16)).to_u8}
         end
         @data.to_unsafe.copy_from(values.to_unsafe, {{size}})

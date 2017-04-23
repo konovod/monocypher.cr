@@ -1,3 +1,5 @@
+# module will be removed once manjaro etc. updates crystal package to 0.22+
+{% if Crystal::VERSION < "0.22" %}
 # patching SecureRandom to provide non-allocating version of random_bytes
 module SecureRandom
   private def self.getrandom_wrapped(buf : Bytes)
@@ -35,3 +37,4 @@ module SecureRandom
     raise "Failed to access secure source to generate random bytes!"
   end
 end
+{% end %}

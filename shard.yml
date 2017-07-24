@@ -6,4 +6,7 @@ authors:
 
 crystal: 0.20.3
 
+scripts:
+  postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocyphera.a ./.build/monocypher.o"
+
 license: GPL-3.0

@@ -1,22 +1,8 @@
 require "./spec_helper"
 
 describe "LibMonoCypher" do
-  # translated from monocypher test.c
-  # not covered:
-  # status |= test(chacha20     , "vectors_chacha20"    , 2);
-  # status |= test(hchacha20    , "vectors_h_chacha20"  , 2);
-  # status |= test(xchacha20    , "vectors_x_chacha20"  , 2);
-  # status |= test(blake2b      , "vectors_blake2b"     , 2);
-  # status |= test(blake2b_easy , "vectors_blake2b_easy", 1);
-  # status |= test(poly1305     , "vectors_poly1305"    , 2);
-  # status |= test(argon2i      , "vectors_argon2i"     , 6);
-  # status |= test(x25519       , "vectors_x25519"      , 2);
-  # status |= test(key_exchange , "vectors_key_exchange", 2);
-  # status |= test(sha512       , "vectors_sha512"      , 1);
-  # status |= test(ed25519_key  , "vectors_ed25519_key" , 1);
-  # status |= test(ed25519_sign1, "vectors_ed25519_sign", 3);
-  # status |= test(ed25519_sign2, "vectors_ed25519_sign", 3);
-  # status |= test_x25519();
+  # two tests from old version of monocypher
+  # TODO - add more tests from recent version
 
   it "memcmp" do
     ptr1 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
@@ -43,16 +29,16 @@ describe "LibMonoCypher" do
     LibMonoCypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
 
     # Authenticated roundtrip (easy interface)
-    LibMonoCypher.lock(box, key, nonce, plaintext, 8)
-    LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should eq 0
-    LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
-    box[0] += 1
-    LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should_not eq 0
-    box[0] -= 1
-
-    # Same result for both interfaces
-    LibMonoCypher.aead_lock(mac, smallbox, key, nonce, nil, 0, plaintext, 8)
-    LibMonoCypher.memcmp(mac, box, 16).should eq 0
-    LibMonoCypher.memcmp(smallbox, box.to_slice[16, 8], 8).should eq 0
+    # LibMonoCypher.lock(box, key, nonce, plaintext, 8)
+    # LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should eq 0
+    # LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
+    # box[0] += 1
+    # LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should_not eq 0
+    # box[0] -= 1
+    #
+    # # Same result for both interfaces
+    # LibMonoCypher.aead_lock(mac, smallbox, key, nonce, nil, 0, plaintext, 8)
+    # LibMonoCypher.memcmp(mac, box, 16).should eq 0
+    # LibMonoCypher.memcmp(smallbox, box.to_slice[16, 8], 8).should eq 0
   end
 end

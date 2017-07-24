@@ -1,12 +1,12 @@
-# monocypher
+# monocypher.cr
 
-Crystal wrapper for a cryptographic library Monocypher (http://loup-vaillant.fr/projects/monocypher/)
+Crystal wrapper for a cryptographic library Monocypher ([Official site](http://loup-vaillant.fr/projects/monocypher/), [Github page](https://github.com/LoupVaillant/Monocypher))
 
-Use `gcc -O2 -shared -o libmonocypher.so -fPIC monocypher.c` to generate .so file for linking with this wrapper
+Sources of Monocypher are included in the shard and will be linked statically with application - this is generally not good for a security-related library, but as Monocypher currently isn't distributed through package manager and crystal applications are distributed mostly in source form, i think this is acceptable as temporary solution.
 
 ## Installation
 
-Add this to your application's `shard.yml`:
+1. Add this to your application's `shard.yml`:
 
 ```yaml
 dependencies:
@@ -14,7 +14,15 @@ dependencies:
     github: konovod/monocypher
 ```
 
+2. `shards update` will install a shard and compile Monocypher static library. So you need clang or gcc.
+
 ## Usage
+
+1. The wrapper is created with an additional requirement - using a crypto library for encrypting/decrypting of messages shouldn't cause heap allocations.
+So it doesn't provide function `plaintext = Crypto.unlock(ciphertext, key)` (as it will require allocation of `plaintext` every time message being decrypted). Instead it provide `Crypto.decrypt(key: Bytes, input: Bytes, output: Bytes)` function that will operate on preallocated buffers.
+2. Most functions receive named arguments. This makes code slightly more verbose, but hopefully will prevent messing up arguments order.
+
+Example of usage:
 
 ```crystal
 require "monocypher"
@@ -26,7 +34,7 @@ alice_public = Crypto::PublicKey.new(secret: alice_secret)
 bob_secret = Crypto::SecretKey.new
 bob_public = Crypto::PublicKey.new(secret: bob_secret)
 
-# alice part
+# sender part
 spawn do
   alice_shared = Crypto::SymmetricKey.new(our_secret: alice_secret, their_public: bob_public)
   message = "This is a test message русский текст"
@@ -36,11 +44,12 @@ spawn do
   channel.send ciphertext
 end
 
-# bob part
+# receiver part
 bob_shared = Crypto::SymmetricKey.new(our_secret: bob_secret, their_public: alice_public)
 ciphertext = channel.receive
 result = Bytes.new(ciphertext.size - Crypto::OVERHEAD_SYMMETRIC)
 Crypto.decrypt(key: bob_shared, input: ciphertext, output: result)
 puts String.new(result)
 ```
-check `spec` dir for more usage examples
+
+check `spec` dir for more usage examples (TODO - other examples)

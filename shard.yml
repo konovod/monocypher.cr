@@ -1,12 +1,12 @@
-name: monocypher
-version: 0.1.0
+name: monocypher.cr
+version: 1.0.0
 
 authors:
   - Konovod <konovod@gmail.com>
 
-crystal: 0.20.3
+crystal: 0.23.0
 
 scripts:
-  postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocyphera.a ./.build/monocypher.o"
+  postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocypher.a ./.build/monocypher.o"
 
 license: MIT

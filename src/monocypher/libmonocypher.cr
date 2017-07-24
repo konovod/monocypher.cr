@@ -15,7 +15,8 @@ lib LibMonoCypher
   end
 
   alias Uint32T = LibC::UInt
-  fun chacha20_xinit = crypto_chacha20_Xinit(ctx : ChachaCtx*, key : Uint8T[32], nonce : Uint8T[24])
+  fun chacha20_x_init = crypto_chacha20_x_init(ctx : ChachaCtx*, key : Uint8T[32], nonce : Uint8T[24])
+  fun chacha20_set_ctr = crypto_chacha20_set_ctr(ctx : ChachaCtx*, ctr : UInt64)
   fun chacha20_encrypt = crypto_chacha20_encrypt(ctx : ChachaCtx*, cipher_text : Uint8T*, plain_text : Uint8T*, message_size : SizeT)
   fun chacha20_stream = crypto_chacha20_stream(ctx : ChachaCtx*, cipher_text : Uint8T*, message_size : SizeT)
   fun poly1305_init = crypto_poly1305_init(ctx : Poly1305Ctx*, key : Uint8T[32])
@@ -61,6 +62,6 @@ lib LibMonoCypher
   fun aead_lock = crypto_aead_lock(mac : Uint8T*, ciphertext : Uint8T*, key : Uint8T[32], nonce : Uint8T*, ad : Uint8T*, ad_size : SizeT, plaintext : Uint8T*, text_size : SizeT)
   fun aead_unlock = crypto_aead_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, ad : Uint8T*, ad_size : SizeT, ciphertext : Uint8T*, text_size : SizeT) : SizeT
 
-  fun lock = crypto_lock(box : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plaintext : Uint8T*, text_size : SizeT)
-  fun unlock = crypto_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], box : Uint8T*, box_size : SizeT) : SizeT
+  fun lock = crypto_lock(mac : Uint8T*, ciphertext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plaintext : Uint8T*, text_size : SizeT)
+  fun unlock = crypto_unlock(plaintext : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T*, ciphertext : Uint8T*, box_size : SizeT) : SizeT
 end

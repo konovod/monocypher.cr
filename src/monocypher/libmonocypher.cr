@@ -1,4 +1,4 @@
-@[Link("monocypher", ldflags: "-L#{__DIR__}/../../.build/lib")]
+@[Link("monocypher", ldflags: "-L#{__DIR__}/../../.build/")]
 lib LibMonoCypher
   alias SizeT = LibC::SizeT
 

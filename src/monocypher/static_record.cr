@@ -1,4 +1,5 @@
 require "random/secure"
+require "crypto/subtle"
 
 module StaticRecord
   macro declare(name, size, initialization = :none)
@@ -44,7 +45,7 @@ module StaticRecord
       end
 
       def compare(other) : Bool
-        return typeof(other) == typeof(self) && LibMonocypher.memcmp(to_unsafe, other.to_unsafe, self.class.size) == 0
+        return typeof(other) == typeof(self) && Crypto::Subtle.constant_time_compare(to_unsafe, other.to_unsafe)
       end
 
       def to_slice

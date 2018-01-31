@@ -4,14 +4,6 @@ describe "LibMonocypher" do
   # two tests from old version of monocypher
   # TODO - add more tests from recent version
 
-  it "memcmp" do
-    ptr1 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
-    ptr2 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
-    ptr3 = Pointer.malloc(9) { |i| i == 8 ? 0u8 : ('a'.ord + i).to_u8 }
-    LibMonocypher.memcmp(ptr1, ptr2, 9).should eq 0
-    LibMonocypher.memcmp(ptr1, ptr3, 9).should_not eq 0
-  end
-
   it "test_aead" do
     key = UInt8.static_array(0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7)
     nonce = UInt8.static_array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
@@ -24,7 +16,7 @@ describe "LibMonocypher" do
     # AEAD roundtrip
     LibMonocypher.aead_lock(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
     LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
-    LibMonocypher.memcmp(plaintext, aout, 8).should eq 0
+    aout.to_slice[0, 8].should eq plaintext.to_slice
     mac[0] += 1
     LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
 

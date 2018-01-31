@@ -11,7 +11,7 @@ describe Crypto do
     salt1.compare(nonce).should be_false
   end
 
-  it "hashes password" do
+  pending "hashes password" do
     pass = "12345678"
     salt = Crypto::Salt.new
     key1 = Crypto::SecretKey.new(password: pass, salt: salt)

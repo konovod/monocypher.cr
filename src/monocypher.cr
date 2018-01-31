@@ -17,7 +17,7 @@ module Crypto
       raise "minimal password length is 4, got#{password.size}" if password.size < 4
       @data = uninitialized UInt8[32]
       area = Pointer(UInt8).malloc(MUCH_MB*1024*1024)
-      LibMonoCypher.argon2i(
+      LibMonocypher.argon2i(
         @data, 32,
         area, MUCH_MB*1024,
         10,
@@ -31,21 +31,21 @@ module Crypto
   struct PublicKey
     def initialize(*, secret : SecretKey)
       @data = uninitialized UInt8[32]
-      LibMonoCypher.x25519_public_key(@data, secret)
+      LibMonocypher.x25519_public_key(@data, secret)
     end
   end
 
   struct PublicSigningKey
     def initialize(*, secret : SecretKey)
       @data = uninitialized UInt8[32]
-      LibMonoCypher.sign_public_key(@data, secret)
+      LibMonocypher.sign_public_key(@data, secret)
     end
   end
 
   struct SymmetricKey
     def initialize(*, our_secret : SecretKey, their_public : PublicKey)
       @data = uninitialized UInt8[32]
-      result = LibMonoCypher.key_exchange(@data, our_secret, their_public)
+      result = LibMonocypher.key_exchange(@data, our_secret, their_public)
       raise "can't generate public key" unless result == 0
     end
   end
@@ -53,18 +53,18 @@ module Crypto
   struct Signature
     def initialize(message, *, secret : SecretKey, public : PublicSigningKey)
       @data = uninitialized UInt8[64]
-      LibMonoCypher.sign(@data, secret, public, message, message.size)
+      LibMonocypher.sign(@data, secret, public, message, message.size)
     end
 
     def initialize(message, *, secret : SecretKey)
       @data = uninitialized UInt8[64]
       public = PublicSigningKey.new(secret: secret)
-      LibMonoCypher.sign_public_key(public, secret)
-      LibMonoCypher.sign(@data, secret, public, message, message.size)
+      LibMonocypher.sign_public_key(public, secret)
+      LibMonocypher.sign(@data, secret, public, message, message.size)
     end
 
     def check(message, *, public : PublicSigningKey) : Bool
-      LibMonoCypher.check(@data, public, message, message.size) == 0
+      LibMonocypher.check(@data, public, message, message.size) == 0
     end
   end
 
@@ -72,7 +72,7 @@ module Crypto
   def self.encrypt(*, output : Bytes, key : SymmetricKey, input : Bytes, additional : Bytes? = nil) : Nil
     raise "data sizes doesn't match" if output.size != input.size + OVERHEAD_SYMMETRIC
     nonce = Nonce.new
-    LibMonoCypher.aead_lock(
+    LibMonocypher.aead_lock(
       output[Nonce.size, Header.size],
       output[Nonce.size + Header.size, input.size],
       key,
@@ -84,7 +84,7 @@ module Crypto
 
   def self.decrypt(*, output : Bytes, additional : Bytes? = nil, key : SymmetricKey, input : Bytes) : Bool
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
-    return LibMonoCypher.aead_unlock(
+    return LibMonocypher.aead_unlock(
       output,
       key,
       input[0, Nonce.size],

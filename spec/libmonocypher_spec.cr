@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe "LibMonoCypher" do
+describe "LibMonocypher" do
   # two tests from old version of monocypher
   # TODO - add more tests from recent version
 
@@ -8,8 +8,8 @@ describe "LibMonoCypher" do
     ptr1 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
     ptr2 = Pointer.malloc(9) { |i| ('a'.ord + i).to_u8 }
     ptr3 = Pointer.malloc(9) { |i| i == 8 ? 0u8 : ('a'.ord + i).to_u8 }
-    LibMonoCypher.memcmp(ptr1, ptr2, 9).should eq 0
-    LibMonoCypher.memcmp(ptr1, ptr3, 9).should_not eq 0
+    LibMonocypher.memcmp(ptr1, ptr2, 9).should eq 0
+    LibMonocypher.memcmp(ptr1, ptr3, 9).should_not eq 0
   end
 
   it "test_aead" do
@@ -22,23 +22,23 @@ describe "LibMonoCypher" do
     smallbox = StaticArray(UInt8, 8).new(0_u8)
     aout = StaticArray(UInt8, 24).new(0_u8)
     # AEAD roundtrip
-    LibMonoCypher.aead_lock(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
-    LibMonoCypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
-    LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
+    LibMonocypher.aead_lock(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
+    LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
+    LibMonocypher.memcmp(plaintext, aout, 8).should eq 0
     mac[0] += 1
-    LibMonoCypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
+    LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
 
     # Authenticated roundtrip (easy interface)
-    # LibMonoCypher.lock(box, key, nonce, plaintext, 8)
-    # LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should eq 0
-    # LibMonoCypher.memcmp(plaintext, aout, 8).should eq 0
+    # LibMonocypher.lock(box, key, nonce, plaintext, 8)
+    # LibMonocypher.unlock(aout, key, nonce, box, 8 + 16).should eq 0
+    # LibMonocypher.memcmp(plaintext, aout, 8).should eq 0
     # box[0] += 1
-    # LibMonoCypher.unlock(aout, key, nonce, box, 8 + 16).should_not eq 0
+    # LibMonocypher.unlock(aout, key, nonce, box, 8 + 16).should_not eq 0
     # box[0] -= 1
     #
     # # Same result for both interfaces
-    # LibMonoCypher.aead_lock(mac, smallbox, key, nonce, nil, 0, plaintext, 8)
-    # LibMonoCypher.memcmp(mac, box, 16).should eq 0
-    # LibMonoCypher.memcmp(smallbox, box.to_slice[16, 8], 8).should eq 0
+    # LibMonocypher.aead_lock(mac, smallbox, key, nonce, nil, 0, plaintext, 8)
+    # LibMonocypher.memcmp(mac, box, 16).should eq 0
+    # LibMonocypher.memcmp(smallbox, box.to_slice[16, 8], 8).should eq 0
   end
 end

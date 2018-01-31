@@ -44,7 +44,7 @@ module StaticRecord
       end
 
       def compare(other) : Bool
-        return typeof(other) == typeof(self) && LibMonoCypher.memcmp(to_unsafe, other.to_unsafe, self.class.size) == 0
+        return typeof(other) == typeof(self) && LibMonocypher.memcmp(to_unsafe, other.to_unsafe, self.class.size) == 0
       end
 
       def to_slice

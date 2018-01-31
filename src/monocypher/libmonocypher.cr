@@ -9,11 +9,18 @@ lib LibMonocypher
   fun verify32 = crypto_verify32(a : Uint8T[32], b : Uint8T[32]) : LibC::Int
   fun verify64 = crypto_verify64(a : Uint8T[64], b : Uint8T[64]) : LibC::Int
   fun wipe = crypto_wipe(secret : Void*, size : SizeT)
-  fun lock = crypto_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plain_text : Uint8T*, text_size : SizeT)
-  fun unlock = crypto_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
-  fun aead_lock = crypto_aead_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
-  fun aead_unlock = crypto_aead_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
-  fun lock_init = crypto_lock_init(ctx : LockCtx*, key : Uint8T[32], nonce : Uint8T[24])
+
+  # fun lock = crypto_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plain_text : Uint8T*, text_size : SizeT)
+  # fun unlock = crypto_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  # fun aead_lock = crypto_aead_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
+  # fun aead_unlock = crypto_aead_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  # fun lock_init = crypto_lock_init(ctx : LockCtx*, key : Uint8T[32], nonce : Uint8T[24])
+  # losing type safety to avoid excessive copying
+  fun lock = crypto_lock(mac : Uint8T*, cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, plain_text : Uint8T*, text_size : SizeT)
+  fun unlock = crypto_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  fun aead_lock = crypto_aead_lock(mac : Uint8T*, cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
+  fun aead_unlock = crypto_aead_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  fun lock_init = crypto_lock_init(ctx : LockCtx*, key : Uint8T[32], nonce : Uint8T*)
 
   struct LockCtx
     chacha : ChachaCtx

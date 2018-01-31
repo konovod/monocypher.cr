@@ -22,9 +22,7 @@ module Crypto
         area, MUCH_MB*1024,
         10,
         password, password.size,
-        salt.to_slice, 16,
-        nil, 0,
-        nil, 0)
+        salt.to_slice, 16)
     end
   end
 

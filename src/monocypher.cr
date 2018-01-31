@@ -1,4 +1,3 @@
-require "secure_random"
 require "./monocypher/*"
 
 module Crypto

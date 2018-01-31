@@ -1,3 +1,5 @@
+require "random/secure"
+
 module StaticRecord
   macro declare(name, size, initialization = :none)
     struct {{name}}
@@ -10,7 +12,7 @@ module StaticRecord
       {% end %}
       {% if initialization == :random %}
       def reroll
-        SecureRandom.random_bytes(@data.to_slice)
+        Random::Secure.random_bytes(@data.to_slice)
       end
 
       def initialize()

@@ -4,23 +4,224 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-// Constant time equality verification
-// returns 0 if it matches, -1 otherwise.
-int crypto_memcmp(const uint8_t *p1, const uint8_t *p2, size_t n);
+////////////////////////
+/// Type definitions ///
+////////////////////////
 
-// constant time zero comparison.
-// returns 0 if the input is all zero, -1 otherwise.
-int crypto_zerocmp(const uint8_t *p, size_t n);
+// Do not rely on the size or content on any of those types,
+// they may change without notice.
 
-////////////////
-/// Chacha20 ///
-////////////////
+// Chacha20
 typedef struct {
-    uint32_t input[16];       // current input, unencrypted
-    uint8_t  random_pool[64]; // last input, encrypted
-    uint8_t  pool_index;      // pointer to random_pool
+    uint32_t input[16]; // current input, unencrypted
+    uint32_t pool [16]; // last input, encrypted
+    size_t   pool_idx;  // pointer to random_pool
 } crypto_chacha_ctx;
 
+// Poly1305
+typedef struct {
+    uint32_t r[4];   // constant multiplier (from the secret key)
+    uint32_t h[5];   // accumulated hash
+    uint32_t c[5];   // chunk of the message
+    uint32_t pad[4]; // random number added at the end (from the secret key)
+    size_t   c_idx;  // How many bytes are there in the chunk.
+} crypto_poly1305_ctx;
+
+// Authenticated encryption
+typedef struct {
+    crypto_chacha_ctx   chacha;
+    crypto_poly1305_ctx poly;
+} crypto_lock_ctx;
+#define crypto_unlock_ctx crypto_lock_ctx
+
+// Hash (Blake2b)
+typedef struct {
+    uint64_t hash[8];
+    uint64_t input_offset[2];
+    uint64_t input[16];
+    size_t   input_idx;
+    size_t   hash_size;
+} crypto_blake2b_ctx;
+
+// Signatures (EdDSA)
+#ifdef ED25519_SHA512
+typedef crypto_sha512_ctx crypto_hash_ctx;
+#else
+typedef crypto_blake2b_ctx crypto_hash_ctx;
+#endif
+typedef struct {
+    crypto_hash_ctx hash;
+    uint8_t buf[96];
+    uint8_t pk [32];
+} crypto_sign_ctx;
+typedef struct {
+    crypto_hash_ctx hash;
+    uint8_t sig[64];
+    uint8_t pk [32];
+} crypto_check_ctx;
+
+
+////////////////////////////
+/// High level interface ///
+////////////////////////////
+
+// Constant time comparisons
+// -------------------------
+
+// Return 0 if a and b are equal, -1 otherwise
+int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
+int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
+int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
+
+// Erase sensitive data
+// --------------------
+
+// Please erase all copies
+void crypto_wipe(void *secret, size_t size);
+
+
+// Authenticated encryption
+// ------------------------
+
+// Direct interface
+void crypto_lock(uint8_t        mac[16],
+                 uint8_t       *cipher_text,
+                 const uint8_t  key[32],
+                 const uint8_t  nonce[24],
+                 const uint8_t *plain_text, size_t text_size);
+int crypto_unlock(uint8_t       *plain_text,
+                  const uint8_t  key[32],
+                  const uint8_t  nonce[24],
+                  const uint8_t  mac[16],
+                  const uint8_t *cipher_text, size_t text_size);
+
+// Direct interface with additional data
+void crypto_aead_lock(uint8_t        mac[16],
+                      uint8_t       *cipher_text,
+                      const uint8_t  key[32],
+                      const uint8_t  nonce[24],
+                      const uint8_t *ad        , size_t ad_size,
+                      const uint8_t *plain_text, size_t text_size);
+int crypto_aead_unlock(uint8_t       *plain_text,
+                       const uint8_t  key[32],
+                       const uint8_t  nonce[24],
+                       const uint8_t  mac[16],
+                       const uint8_t *ad         , size_t ad_size,
+                       const uint8_t *cipher_text, size_t text_size);
+
+// Incremental interface (encryption)
+void crypto_lock_init(crypto_lock_ctx *ctx,
+                      const uint8_t    key[32],
+                      const uint8_t    nonce[24]);
+#define crypto_lock_aead_auth crypto_lock_auth
+void crypto_lock_update(crypto_lock_ctx *ctx,
+                        uint8_t         *cipher_text,
+                        const uint8_t   *plain_text,
+                        size_t           text_size);
+void crypto_lock_final(crypto_lock_ctx *ctx, uint8_t mac[16]);
+
+// Incremental interface (decryption)
+#define crypto_unlock_init      crypto_lock_init
+#define crypto_unlock_aead_auth crypto_lock_auth
+void crypto_unlock_update(crypto_lock_ctx *ctx,
+                          uint8_t         *plain_text,
+                          const uint8_t   *cipher_text,
+                          size_t           text_size);
+int crypto_unlock_final(crypto_lock_ctx *ctx, const uint8_t mac[16]);
+
+
+// General purpose hash (Blake2b)
+// ------------------------------
+
+// Direct interface
+void crypto_blake2b(uint8_t hash[64],
+                    const uint8_t *message, size_t message_size);
+
+void crypto_blake2b_general(uint8_t       *hash    , size_t hash_size,
+                            const uint8_t *key     , size_t key_size, // optional
+                            const uint8_t *message , size_t message_size);
+
+// Incremental interface
+void crypto_blake2b_init  (crypto_blake2b_ctx *ctx);
+void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
+                           const uint8_t *message, size_t message_size);
+void crypto_blake2b_final (crypto_blake2b_ctx *ctx, uint8_t *hash);
+
+void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
+                                 const uint8_t      *key, size_t key_size);
+
+
+// Password key derivation (Argon2 i)
+// ----------------------------------
+void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
+                    void          *work_area, uint32_t nb_blocks,     // >= 8
+                    uint32_t       nb_iterations,                     // >= 1
+                    const uint8_t *password,  uint32_t password_size,
+                    const uint8_t *salt,      uint32_t salt_size);
+
+void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size, // >= 4
+                            void          *work_area, uint32_t nb_blocks, // >= 8
+                            uint32_t       nb_iterations,                 // >= 1
+                            const uint8_t *password,  uint32_t password_size,
+                            const uint8_t *salt,      uint32_t salt_size, // >= 8
+                            const uint8_t *key,       uint32_t key_size,
+                            const uint8_t *ad,        uint32_t ad_size);
+
+
+// Key exchange (x25519 + HChacha20)
+// ---------------------------------
+#define crypto_key_exchange_public_key crypto_x25519_public_key
+int crypto_key_exchange(uint8_t       shared_key      [32],
+                        const uint8_t your_secret_key [32],
+                        const uint8_t their_public_key[32]);
+
+
+// Signatures (EdDSA with curve25519 + Blake2b)
+// --------------------------------------------
+
+// Generate public key
+void crypto_sign_public_key(uint8_t        public_key[32],
+                            const uint8_t  secret_key[32]);
+
+// Direct interface
+void crypto_sign(uint8_t        signature [64],
+                 const uint8_t  secret_key[32],
+                 const uint8_t  public_key[32], // optional, may be 0
+                 const uint8_t *message, size_t message_size);
+int crypto_check(const uint8_t  signature [64],
+                 const uint8_t  public_key[32],
+                 const uint8_t *message, size_t message_size);
+
+// Incremental interface for signatures (2 passes)
+void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
+                                 const uint8_t  secret_key[32],
+                                 const uint8_t  public_key[32]);
+void crypto_sign_update(crypto_sign_ctx *ctx,
+                        const uint8_t *message, size_t message_size);
+void crypto_sign_init_second_pass(crypto_sign_ctx *ctx);
+// crypto_sign_update()
+void crypto_sign_final(crypto_sign_ctx *ctx, uint8_t signature[64]);
+
+// Incremental interface for verification (1 pass)
+void crypto_check_init  (crypto_check_ctx *ctx,
+                         const uint8_t signature[64],
+                         const uint8_t public_key[32]);
+void crypto_check_update(crypto_check_ctx *ctx,
+                         const uint8_t *message, size_t message_size);
+int crypto_check_final  (crypto_check_ctx *ctx);
+
+
+////////////////////////////
+/// Low level primitives ///
+////////////////////////////
+
+// For experts only.  You have been warned.
+
+
+// Chacha20
+// --------
+
+// Specialised hash.
 void crypto_chacha20_H(uint8_t       out[32],
                        const uint8_t key[32],
                        const uint8_t in [16]);
@@ -38,131 +239,47 @@ void crypto_chacha20_set_ctr(crypto_chacha_ctx *ctx, uint64_t ctr);
 void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              uint8_t           *cipher_text,
                              const uint8_t     *plain_text,
-                             size_t             message_size);
+                             size_t             text_size);
 
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
                             uint8_t *stream, size_t size);
 
-/////////////////
-/// Poly 1305 ///
-/////////////////
-typedef struct {
-    uint32_t r[4];
-    uint32_t h[5];
-    uint32_t c[5];
-    uint32_t pad[5];
-    size_t   c_index;
-} crypto_poly1305_ctx;
 
-void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const uint8_t key[32]);
+// Poly 1305
+// ---------
 
+// Direct interface
+void crypto_poly1305(uint8_t        mac[16],
+                     const uint8_t *message, size_t message_size,
+                     const uint8_t  key[32]);
+
+// Incremental interface
+void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
-                            const uint8_t *msg, size_t msg_size);
+                            const uint8_t *message, size_t message_size);
+void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
-void crypto_poly1305_final(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
+// Deprecated name
+#define crypto_poly1305_auth crypto_poly1305
 
-void crypto_poly1305_auth(uint8_t        mac[16],
-                          const uint8_t *msg, size_t msg_size,
-                          const uint8_t  key[32]);
 
-////////////////
-/// Blake2 b ///
-////////////////
-typedef struct {
-    uint64_t hash[8];
-    uint64_t input_offset[2];
-    uint8_t  buffer[128];
-    size_t   buffer_idx;
-    size_t   hash_size;
-} crypto_blake2b_ctx;
-
-void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t out_size,
-                                 const uint8_t      *key, size_t key_size);
-
-void crypto_blake2b_init(crypto_blake2b_ctx *ctx);
-
-void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
-                           const uint8_t *in, size_t in_size);
-
-void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *out);
-
-void crypto_blake2b_general(uint8_t       *out, size_t out_size, // digest
-                            const uint8_t *key, size_t key_size, // optional
-                            const uint8_t *in , size_t in_size);
-
-void crypto_blake2b(uint8_t out[64], const uint8_t *in, size_t in_size);
-
-////////////////
-/// Argon2 i ///
-////////////////
-void crypto_argon2i(uint8_t       *tag,       uint32_t tag_size,      // >= 4
-                    void          *work_area, uint32_t nb_blocks,     // >= 8
-                    uint32_t       nb_iterations,
-                    const uint8_t *password,  uint32_t password_size,
-                    const uint8_t *salt,      uint32_t salt_size,     // >= 8
-                    const uint8_t *key,       uint32_t key_size,
-                    const uint8_t *ad,        uint32_t ad_size);
-
-///////////////
-/// X-25519 ///
-///////////////
-int crypto_x25519(uint8_t       shared_secret   [32],
-                  const uint8_t your_secret_key [32],
-                  const uint8_t their_public_key[32]);
-
+// X-25519
+// -------
 void crypto_x25519_public_key(uint8_t       public_key[32],
                               const uint8_t secret_key[32]);
+int crypto_x25519(uint8_t       raw_shared_secret[32],
+                  const uint8_t your_secret_key  [32],
+                  const uint8_t their_public_key [32]);
 
 
-/////////////
-/// EdDSA ///
-/////////////
-void crypto_sign_public_key(uint8_t        public_key[32],
-                            const uint8_t  secret_key[32]);
-
-void crypto_sign(uint8_t        signature[64],
-                 const uint8_t  secret_key[32],
-                 const uint8_t  public_key[32], // optional, may be 0
-                 const uint8_t *message, size_t message_size);
-
-int crypto_check(const uint8_t  signature[64],
-                 const uint8_t  public_key[32],
-                 const uint8_t *message, size_t message_size);
-
-////////////////////
-/// Key exchange ///
-////////////////////
-int crypto_key_exchange(uint8_t       shared_key      [32],
-                        const uint8_t your_secret_key [32],
-                        const uint8_t their_public_key[32]);
-
-////////////////////////////////
-/// Authenticated encryption ///
-////////////////////////////////
-void crypto_aead_lock(uint8_t        mac[16],
-                      uint8_t       *ciphertext,
-                      const uint8_t  key[32],
-                      const uint8_t  nonce[24],
-                      const uint8_t *ad       , size_t ad_size,
-                      const uint8_t *plaintext, size_t text_size);
-
-int crypto_aead_unlock(uint8_t       *plaintext,
-                       const uint8_t  key[32],
-                       const uint8_t  nonce[24],
-                       const uint8_t  mac[16],
-                       const uint8_t *ad        , size_t ad_size,
-                       const uint8_t *ciphertext, size_t text_size);
-
-void crypto_lock(uint8_t        mac[16],
-                 uint8_t       *ciphertext,
-                 const uint8_t  key[32],
-                 const uint8_t  nonce[24],
-                 const uint8_t *plaintext, size_t text_size);
-
-int crypto_unlock(uint8_t       *plaintext,
-                  const uint8_t  key[32],
-                  const uint8_t  nonce[24],
-                  const uint8_t  mac[16],
-                  const uint8_t *ciphertext, size_t text_size);
+// Building block for authenticated encryption
+// -------------------------------------------
+void crypto_lock_encrypt(crypto_lock_ctx *ctx,
+                         uint8_t         *cipher_text,
+                         const uint8_t   *plain_text,
+                         size_t           text_size);
+void crypto_lock_auth(crypto_lock_ctx *ctx,
+                      const uint8_t   *message,
+                      size_t           message_size);
 
 #endif // MONOCYPHER_H

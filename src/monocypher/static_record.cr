@@ -1,7 +1,7 @@
 require "random/secure"
 require "crypto/subtle"
 
-module StaticRecord
+module Crypto::StaticRecord
   macro declare(name, size, initialization = :none)
     struct {{name}}
       @data : StaticArray(UInt8, {{size}})

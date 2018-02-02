@@ -7,6 +7,6 @@ authors:
 crystal: 0.23.0
 
 scripts:
-  postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocypher.a ./.build/monocypher.o"
+  postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; cc ./ext/sha512.c -c -o ./.build/sha512.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocypher.a ./.build/monocypher.o ./.build/sha512.o"
 
 license: MIT

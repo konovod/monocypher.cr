@@ -57,13 +57,14 @@ check `spec` dir for more usage examples (TODO - other examples)
 
 ## Hashes
 Monocypher includes functions for cryptographic hashes Blake2b and SHA-512, they are wrapped with simple crystal functions (TODO - API for incremental hashing. How it should looks?)
-```
-Crypto.sha512("".to_slice).hexstring # "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+```crystal
+Crypto.sha512("".to_slice).hexstring 
+# "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
 
 Crypto.blake2b("abc".to_slice, key: "".to_slice, hash_size: 64).hexstring
 # same as Crypto.blake2b("abc".to_slice).hexstring
 # ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923
-# somehow it doesn't match 
+# somehow it doesn't match official vectors :)
 ```
 
 

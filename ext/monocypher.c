@@ -4,10 +4,9 @@
 /// Utilities ///
 /////////////////
 
-// By default, EdDSA signatures use blake2b.  SHA-512 is provided as
-// an option for full ed25519 compatibility (a must for test vectors).
-// Compile with option -DED25519_SHA512 to use with sha512.  If you do
-// so, you must provide the "sha512" header with suitable functions.
+// By default, EdDSA signatures use blake2b.  SHA-512 is provided as an
+// option for full ed25519 compatibility. To use with SHA-512, compile
+// with option -DED25519_SHA512 and provide the "sha512" header.
 #ifdef ED25519_SHA512
     #include "sha512.h"
     #define HASH crypto_sha512
@@ -29,6 +28,8 @@ typedef uint32_t u32;
 typedef int32_t  i32;
 typedef int64_t  i64;
 typedef uint64_t u64;
+
+#define MIN(a, b) ((a) <= (b) ? (a) : (b))
 
 static u32 load24_le(const u8 s[3])
 {
@@ -102,11 +103,11 @@ void crypto_wipe(void *secret, size_t size)
 /////////////////
 /// Chacha 20 ///
 /////////////////
-#define QUARTERROUND(a, b, c, d)          \
-    a += b;  d ^= a;  d = rotl32(d, 16);  \
-    c += d;  b ^= c;  b = rotl32(b, 12);  \
-    a += b;  d ^= a;  d = rotl32(d,  8);  \
-    c += d;  b ^= c;  b = rotl32(b,  7)
+#define QUARTERROUND(a, b, c, d)     \
+    a += b;  d = rotl32(d ^ a, 16);  \
+    c += d;  b = rotl32(b ^ c, 12);  \
+    a += b;  d = rotl32(d ^ a,  8);  \
+    c += d;  b = rotl32(b ^ c,  7)
 
 static void chacha20_rounds(u32 out[16], const u32 in[16])
 {
@@ -147,8 +148,8 @@ static void chacha20_init_key(crypto_chacha_ctx *ctx, const u8 key[32])
 
 static u8 chacha20_pool_byte(crypto_chacha_ctx *ctx)
 {
-    u32 pool_word = ctx->pool[ctx->pool_idx / 4];
-    u8  pool_byte = pool_word >> (8*(ctx->pool_idx % 4));
+    u32 pool_word = ctx->pool[ctx->pool_idx >> 2];
+    u8  pool_byte = pool_word >> (8*(ctx->pool_idx & 3));
     ctx->pool_idx++;
     return pool_byte;
 }
@@ -185,6 +186,25 @@ void crypto_chacha20_H(u8 out[32], const u8 key[32], const u8 in[16])
     WIPE_BUFFER(buffer);
 }
 
+static void chacha20_encrypt(crypto_chacha_ctx *ctx,
+                             u8                *cipher_text,
+                             const u8          *plain_text,
+                             size_t             text_size)
+{
+    FOR (i, 0, text_size) {
+        if (ctx->pool_idx == 64) {
+            chacha20_refill_pool(ctx);
+        }
+        u8 plain = 0;
+        if (plain_text != 0) {
+            plain = *plain_text;
+            plain_text++;
+        }
+        *cipher_text = chacha20_pool_byte(ctx) ^ plain;
+        cipher_text++;
+    }
+}
+
 void crypto_chacha20_init(crypto_chacha_ctx *ctx,
                           const u8           key[32],
                           const u8           nonce[8])
@@ -216,54 +236,37 @@ void crypto_chacha20_encrypt(crypto_chacha_ctx *ctx,
                              const u8          *plain_text,
                              size_t             text_size)
 {
-    // Align ourselves with a block
-    while (ctx->pool_idx % 64 != 0 && text_size > 0) {
-        u8 stream = chacha20_pool_byte(ctx);
-        u8 plain  = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
-            plain_text++;
-        }
-        *cipher_text = stream ^ plain;
-        text_size--;
-        cipher_text++;
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->pool_idx & 63, text_size);
+    chacha20_encrypt(ctx, cipher_text, plain_text, align);
+    if (plain_text != 0) {
+        plain_text += align;
     }
+    cipher_text += align;
+    text_size   -= align;
 
-    // Main processing by 64 byte chunks
-    size_t nb_blocks = text_size / 64;
-    size_t remainder = text_size % 64;
-    FOR (i, 0, nb_blocks) {
+    // Process the message block by block
+    FOR (i, 0, text_size >> 6) {  // number of blocks
         chacha20_refill_pool(ctx);
         if (plain_text != 0) {
             FOR (j, 0, 16) {
                 u32 plain = load32_le(plain_text);
-                store32_le(cipher_text + j * 4, ctx->pool[j] ^ plain);
-                plain_text += 4;
+                store32_le(cipher_text, ctx->pool[j] ^ plain);
+                plain_text  += 4;
+                cipher_text += 4;
             }
-        }
-        else {
+        } else {
             FOR (j, 0, 16) {
-                store32_le(cipher_text + j * 4, ctx->pool[j]);
+                store32_le(cipher_text, ctx->pool[j]);
+                cipher_text += 4;
             }
         }
-        cipher_text += 64;
-        if (nb_blocks > 0) {
-            ctx->pool_idx = 64;
-        }
+        ctx->pool_idx = 64;
     }
-    // Remaining input, byte by byte
-    FOR (i, 0, remainder) {
-        if (ctx->pool_idx == 64) {
-            chacha20_refill_pool(ctx);
-        }
-        u8 plain = 0;
-        if (plain_text != 0) {
-            plain = *plain_text;
-            plain_text++;
-        }
-        *cipher_text = chacha20_pool_byte(ctx) ^ plain;
-        cipher_text++;
-    }
+    text_size &= 63;
+
+    // remaining bytes
+    chacha20_encrypt(ctx, cipher_text, plain_text, text_size);
 }
 
 void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
@@ -279,11 +282,11 @@ void crypto_chacha20_stream(crypto_chacha_ctx *ctx,
 
 // h = (h + c) * r
 // preconditions:
-//   ctx->h <= 7_ffffffff_ffffffff_ffffffff_ffffffff
+//   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->c <= 1_ffffffff_ffffffff_ffffffff_ffffffff
 //   ctx->r <=   0ffffffc_0ffffffc_0ffffffc_0fffffff
 // Postcondition:
-//   ctx->h <= 4_87ffffe4_8fffffe2_97ffffe0_9ffffffa
+//   ctx->h <= 4_ffffffff_ffffffff_ffffffff_ffffffff
 static void poly_block(crypto_poly1305_ctx *ctx)
 {
     // s = h + c, without carry propagation
@@ -291,7 +294,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 s1 = ctx->h[1] + (u64)ctx->c[1]; // s1 <= 1_fffffffe
     const u64 s2 = ctx->h[2] + (u64)ctx->c[2]; // s2 <= 1_fffffffe
     const u64 s3 = ctx->h[3] + (u64)ctx->c[3]; // s3 <= 1_fffffffe
-    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=   00000004
+    const u64 s4 = ctx->h[4] + (u64)ctx->c[4]; // s4 <=          5
 
     // Local all the things!
     const u32 r0 = ctx->r[0];       // r0  <= 0fffffff
@@ -308,10 +311,10 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 x1 = s0*r1 + s1*r0  + s2*rr3 + s3*rr2 + s4*rr1;//<=8fffffe20ffffff6
     const u64 x2 = s0*r2 + s1*r1  + s2*r0  + s3*rr3 + s4*rr2;//<=87ffffe417fffff4
     const u64 x3 = s0*r3 + s1*r2  + s2*r1  + s3*r0  + s4*rr3;//<=7fffffe61ffffff2
-    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=0000000000000018
+    const u32 x4 = s4 * (r0 & 3); // ...recover 2 bits       //<=               f
 
     // partial reduction modulo 2^130 - 5
-    const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffffe
+    const u32 u5 = x4 + (x3 >> 32); // u5 <= 7ffffff5
     const u64 u0 = (u5 >>  2) * 5 + (x0 & 0xffffffff);
     const u64 u1 = (u0 >> 32)     + (x1 & 0xffffffff) + (x0 >> 32);
     const u64 u2 = (u1 >> 32)     + (x2 & 0xffffffff) + (x1 >> 32);
@@ -319,7 +322,7 @@ static void poly_block(crypto_poly1305_ctx *ctx)
     const u64 u4 = (u3 >> 32)     + (u5 & 3);
 
     // Update the hash
-    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffffa
+    ctx->h[0] = u0 & 0xffffffff; // u0 <= 1_9ffffff0
     ctx->h[1] = u1 & 0xffffffff; // u1 <= 1_97ffffe0
     ctx->h[2] = u2 & 0xffffffff; // u2 <= 1_8fffffe2
     ctx->h[3] = u3 & 0xffffffff; // u3 <= 1_87ffffe4
@@ -338,10 +341,22 @@ static void poly_clear_c(crypto_poly1305_ctx *ctx)
 
 static void poly_take_input(crypto_poly1305_ctx *ctx, u8 input)
 {
-    size_t word = ctx->c_idx / 4;
-    size_t byte = ctx->c_idx % 4;
+    size_t word = ctx->c_idx >> 2;
+    size_t byte = ctx->c_idx & 3;
     ctx->c[word] |= (u32)input << (byte * 8);
     ctx->c_idx++;
+}
+
+static void poly_update(crypto_poly1305_ctx *ctx,
+                        const u8 *message, size_t message_size)
+{
+    FOR (i, 0, message_size) {
+        poly_take_input(ctx, message[i]);
+        if (ctx->c_idx == 16) {
+            poly_block(ctx);
+            poly_clear_c(ctx);
+        }
+    }
 }
 
 void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
@@ -362,19 +377,14 @@ void crypto_poly1305_init(crypto_poly1305_ctx *ctx, const u8 key[32])
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const u8 *message, size_t message_size)
 {
-    // Align ourselves with a block
-    while (ctx->c_idx % 16 != 0 && message_size > 0) {
-        poly_take_input(ctx, *message);
-        message++;
-        message_size--;
-    }
-    if (ctx->c_idx == 16) {
-        poly_block(ctx);
-        poly_clear_c(ctx);
-    }
-    // Process the input block by block
-    size_t nb_blocks = message_size / 16;
-    size_t remainder = message_size % 16;
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->c_idx & 15, message_size);
+    poly_update(ctx, message, align);
+    message      += align;
+    message_size -= align;
+
+    // Process the message block by block
+    size_t nb_blocks = message_size >> 4;
     FOR (i, 0, nb_blocks) {
         ctx->c[0] = load32_le(message +  0);
         ctx->c[1] = load32_le(message +  4);
@@ -386,11 +396,10 @@ void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
     if (nb_blocks > 0) {
         poly_clear_c(ctx);
     }
+    message_size &= 15;
 
-    // Input the remaining bytes
-    FOR (i, 0, remainder) {
-        poly_take_input(ctx, message[i]);
-    }
+    // remaining bytes
+    poly_update(ctx, message, message_size);
 }
 
 void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
@@ -407,20 +416,23 @@ void crypto_poly1305_final(crypto_poly1305_ctx *ctx, u8 mac[16])
 
     // check if we should subtract 2^130-5 by performing the
     // corresponding carry propagation.
-    u64 u = 5;
-    u += ctx->h[0];  u >>= 32;
-    u += ctx->h[1];  u >>= 32;
-    u += ctx->h[2];  u >>= 32;
-    u += ctx->h[3];  u >>= 32;
-    u += ctx->h[4];  u >>=  2;
-    // now u indicates how many times we should subtract 2^130-5 (0 or 1)
+    const u64 u0 = (u64)5     + ctx->h[0]; // <= 1_00000004
+    const u64 u1 = (u0 >> 32) + ctx->h[1]; // <= 1_00000000
+    const u64 u2 = (u1 >> 32) + ctx->h[2]; // <= 1_00000000
+    const u64 u3 = (u2 >> 32) + ctx->h[3]; // <= 1_00000000
+    const u64 u4 = (u3 >> 32) + ctx->h[4]; // <=          5
+    // u4 indicates how many times we should subtract 2^130-5 (0 or 1)
 
-    // store h + pad, minus 2^130-5 if u tells us to.
-    u *= 5;
-    u += (i64)(ctx->h[0]) + ctx->pad[0];  store32_le(mac     , u);  u >>= 32;
-    u += (i64)(ctx->h[1]) + ctx->pad[1];  store32_le(mac +  4, u);  u >>= 32;
-    u += (i64)(ctx->h[2]) + ctx->pad[2];  store32_le(mac +  8, u);  u >>= 32;
-    u += (i64)(ctx->h[3]) + ctx->pad[3];  store32_le(mac + 12, u);
+    // h + pad, minus 2^130-5 if u4 exceeds 3
+    const u64 uu0 = (u4 >> 2) * 5 + ctx->h[0] + ctx->pad[0]; // <= 2_00000003
+    const u64 uu1 = (uu0 >> 32)   + ctx->h[1] + ctx->pad[1]; // <= 2_00000000
+    const u64 uu2 = (uu1 >> 32)   + ctx->h[2] + ctx->pad[2]; // <= 2_00000000
+    const u64 uu3 = (uu2 >> 32)   + ctx->h[3] + ctx->pad[3]; // <= 2_00000000
+
+    store32_le(mac     , uu0);
+    store32_le(mac +  4, uu1);
+    store32_le(mac +  8, uu2);
+    store32_le(mac + 12, uu3);
 
     WIPE_CTX(ctx);
 }
@@ -453,14 +465,6 @@ static void blake2b_incr(crypto_blake2b_ctx *ctx)
     if (x[0] < y) {
         x[1]++;
     }
-}
-
-static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input)
-{
-    size_t word = ctx->input_idx / 8;
-    size_t byte = ctx->input_idx % 8;
-    ctx->input[word] |= (u64)input << (byte * 8);
-    ctx->input_idx++;
 }
 
 static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
@@ -520,12 +524,12 @@ static void blake2b_compress(crypto_blake2b_ctx *ctx, int is_last_block)
     ctx->hash[7] ^= v7 ^ v15;
 }
 
-static void blake2b_reset_input(crypto_blake2b_ctx *ctx)
+static void blake2b_set_input(crypto_blake2b_ctx *ctx, u8 input, size_t index)
 {
-    FOR(i, 0, 16) {
-        ctx->input[i] = 0;
-    }
-    ctx->input_idx = 0;
+    size_t word = index >> 3;
+    size_t byte = index & 7;
+    ctx->input[word] &= ~((u64)0xff  << (byte << 3));
+    ctx->input[word] |=   (u64)input << (byte << 3);
 }
 
 static void blake2b_end_block(crypto_blake2b_ctx *ctx)
@@ -533,14 +537,17 @@ static void blake2b_end_block(crypto_blake2b_ctx *ctx)
     if (ctx->input_idx == 128) {  // If buffer is full,
         blake2b_incr(ctx);        // update the input offset
         blake2b_compress(ctx, 0); // and compress the (not last) block
-        blake2b_reset_input(ctx);
+        ctx->input_idx = 0;
     }
 }
 
-static void blake2b_fill_block(crypto_blake2b_ctx *ctx, const u8 message[128])
+static void blake2b_update(crypto_blake2b_ctx *ctx,
+                           const u8 *message, size_t message_size)
 {
-    FOR (j, 0, 16) {
-        ctx->input[j] = load64_le(message + j*8);
+    FOR (i, 0, message_size) {
+        blake2b_end_block(ctx);
+        blake2b_set_input(ctx, message[i], ctx->input_idx);
+        ctx->input_idx++;
     }
 }
 
@@ -556,12 +563,15 @@ void crypto_blake2b_general_init(crypto_blake2b_ctx *ctx, size_t hash_size,
     ctx->input_offset[0] = 0;         // begining of the input, no offset
     ctx->input_offset[1] = 0;         // begining of the input, no offset
     ctx->hash_size       = hash_size; // remember the hash size we want
-    blake2b_reset_input(ctx);         // clear the input buffer
+    ctx->input_idx       = 0;
 
-    // if there is a key, the first block is that key
+    // if there is a key, the first block is that key (padded with zeroes)
     if (key_size > 0) {
-        crypto_blake2b_update(ctx, key, key_size);
-        ctx->input_idx = 128;
+        u8 padded_key[128] = {0};
+        FOR (i, 0, key_size) {
+            padded_key[i] = key[i];
+        }
+        crypto_blake2b_update(ctx, padded_key, 128);
     }
 }
 
@@ -573,50 +583,41 @@ void crypto_blake2b_init(crypto_blake2b_ctx *ctx)
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const u8 *message, size_t message_size)
 {
-    // Align ourselves with blocks
-    while (ctx->input_idx % 128 != 0 && message_size > 0) {
-        blake2b_set_input(ctx, *message);
-        message++;
-        message_size--;
-    }
+    // Align ourselves with block boundaries
+    size_t align = MIN(-ctx->input_idx & 127, message_size);
+    blake2b_update(ctx, message, align);
+    message      += align;
+    message_size -= align;
 
-    // Process the input one block at a time
-    size_t nb_blocks = message_size / 128;
-    size_t remainder = message_size % 128;
-    if (nb_blocks > 0) {
-        // first block
+    // Process the message block by block
+    FOR (i, 0, message_size >> 7) { // number of blocks
         blake2b_end_block(ctx);
-        blake2b_fill_block(ctx, message);
+        FOR (j, 0, 16) {
+            ctx->input[j] = load64_le(message + j*8);
+        }
         message += 128;
         ctx->input_idx = 128;
-        // subsequent blocks
-        FOR (i, 0, nb_blocks - 1) {
-            blake2b_incr(ctx);
-            blake2b_compress(ctx, 0);
-            blake2b_fill_block(ctx, message);
-            message += 128;
-        }
     }
+    message_size &= 127;
 
-    // Load the remainder
-    if (remainder != 0) {
-        blake2b_end_block(ctx);
-    }
-    FOR (i, 0, remainder) {
-        blake2b_set_input(ctx, message[i]);
-    }
+    // remaining bytes
+    blake2b_update(ctx, message, message_size);
 }
 
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, u8 *hash)
 {
+    // Pad the end of the block with zeroes
+    FOR (i, ctx->input_idx, 128) {
+        blake2b_set_input(ctx, 0, i);
+    }
     blake2b_incr(ctx);         // update the input offset
     blake2b_compress(ctx, -1); // compress the last block
-    size_t nb_words  = ctx->hash_size / 8;
+    size_t nb_words  = ctx->hash_size >> 3;
     FOR (i, 0, nb_words) {
         store64_le(hash + i*8, ctx->hash[i]);
     }
     FOR (i, nb_words * 8, ctx->hash_size) {
-        hash[i] = (ctx->hash[i / 8] >> (8 * (i % 8))) & 0xff;
+        hash[i] = (ctx->hash[i >> 3] >> (8 * (i & 7))) & 0xff;
     }
     WIPE_CTX(ctx);
 }
@@ -653,8 +654,6 @@ static void wipe_block(block *b)
     }
 }
 
-static u32 min(u32 a, u32 b) { return a <= b ? a : b; }
-
 // updates a blake2 hash with a 32 bit word, little endian.
 static void blake_update_32(crypto_blake2b_ctx *ctx, u32 input)
 {
@@ -690,7 +689,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
                           const u8 *input , u32 input_size)
 {
     crypto_blake2b_ctx ctx;
-    crypto_blake2b_general_init(&ctx, min(digest_size, 64), 0, 0);
+    crypto_blake2b_general_init(&ctx, MIN(digest_size, 64), 0, 0);
     blake_update_32            (&ctx, digest_size);
     crypto_blake2b_update      (&ctx, input, input_size);
     crypto_blake2b_final       (&ctx, digest);
@@ -699,7 +698,7 @@ static void extended_hash(u8       *digest, u32 digest_size,
     if (digest_size > 64) {
         // the conversion to u64 avoids integer overflow on
         // ludicrously big hash sizes.
-        u32 r   = (((u64)digest_size + 31) / 32) - 2;
+        u32 r   = (((u64)digest_size + 31) >> 5) - 2;
         u32 i   =  1;
         u32 in  =  0;
         u32 out = 32;
@@ -821,8 +820,8 @@ static void gidx_refresh(gidx_ctx *ctx)
 
     // Shuffle the block thus: ctx->b = G((G(ctx->b, zero)), zero)
     // (G "square" function), to get cheap pseudo-random numbers.
-    unary_g(&(ctx->b));
-    unary_g(&(ctx->b));
+    unary_g(&ctx->b);
+    unary_g(&ctx->b);
 }
 
 static void gidx_init(gidx_ctx *ctx,
@@ -850,11 +849,11 @@ static void gidx_init(gidx_ctx *ctx,
 static u32 gidx_next(gidx_ctx *ctx)
 {
     // lazily creates the offset block we need
-    if (ctx->offset % 128 == 0) {
+    if ((ctx->offset & 127) == 0) {
         ctx->ctr++;
         gidx_refresh(ctx);
     }
-    u32 index  = ctx->offset % 128; // save index  for current call
+    u32 index  = ctx->offset & 127; // save index  for current call
     u32 offset = ctx->offset;       // save offset for current call
     ctx->offset++;                  // update offset for next call
 
@@ -865,14 +864,14 @@ static u32 gidx_next(gidx_ctx *ctx)
     //          blocks in this segment.  THE SPEC SUGGESTS OTHERWISE.
     //          I CONFORM TO THE REFERENCE IMPLEMENTATION.
     int first_pass  = ctx->pass_number == 0;
-    u32 slice_size  = ctx->nb_blocks / 4;
+    u32 slice_size  = ctx->nb_blocks >> 2;
     u32 nb_segments = first_pass ? ctx->slice_number : 3;
     u32 area_size   = nb_segments * slice_size + offset - 1;
 
     // Computes the starting position of the reference area.
     // CONTRARY TO WHAT THE SPEC SUGGESTS, IT STARTS AT THE
     // NEXT SEGMENT, NOT THE NEXT BLOCK.
-    u32 next_slice = ((ctx->slice_number + 1) % 4) * slice_size;
+    u32 next_slice = ((ctx->slice_number + 1) & 3) * slice_size;
     u32 start_pos  = first_pass ? 0 : next_slice;
 
     // Generate offset from J1 (no need for J2, there's only one lane)
@@ -936,8 +935,8 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
     }
 
     // Actual number of blocks
-    nb_blocks -= nb_blocks % 4; // round down to 4 p (p == 1 thread)
-    const u32 segment_size = nb_blocks / 4;
+    nb_blocks -= nb_blocks & 3; // round down to 4 p (p == 1 thread)
+    const u32 segment_size = nb_blocks >> 2;
 
     // fill (then re-fill) the rest of the blocks
     block tmp;
@@ -967,7 +966,7 @@ void crypto_argon2i_general(u8       *hash,      u32 hash_size,
             }
         }
     }
-    wipe_block(&(ctx.b));
+    wipe_block(&ctx.b);
     wipe_block(&tmp);
     // hash the very last block with H' into the output hash
     u8 final_block[1024];
@@ -1276,7 +1275,7 @@ static void x25519_ladder(const fe x1, fe x2, fe z2, fe x3, fe z3,
     fe t0, t1;
     for (int pos = 254; pos >= 0; --pos) {
         // constant time conditional swap before ladder step
-        int b = (scalar[pos / 8] >> (pos & 7)) & 1;
+        int b = (scalar[pos >> 3] >> (pos & 7)) & 1;
         swap ^= b; // xor trick avoids swapping at the end of the loop
         fe_cswap(x2, x3, swap);
         fe_cswap(z2, z3, swap);
@@ -1324,10 +1323,9 @@ int crypto_x25519(u8       raw_shared_secret[32],
     fe_mul(x2, x2, z2);
     fe_tobytes(raw_shared_secret, x2);
 
-    WIPE_BUFFER(x1);
+    WIPE_BUFFER(x1);  WIPE_BUFFER(e );
     WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
     WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
-    WIPE_BUFFER(e );
 
     // Returns -1 if the input is all zero
     // (happens with some malicious public keys)
@@ -1480,10 +1478,10 @@ static void ge_scalarmult(ge *p, const ge *q, const u8 scalar[32])
     fe_mul(p->X, x1, t2);    fe_mul(p->Y, y1, t1);    fe_mul(p->Z, y1, t2);
     fe_mul(p->T, x1, t1);
 
-    WIPE_BUFFER(x1);  WIPE_BUFFER(y1);  WIPE_BUFFER(z1);
-    WIPE_BUFFER(x2);                    WIPE_BUFFER(z2);
-    WIPE_BUFFER(x3);                    WIPE_BUFFER(z3);
-    WIPE_BUFFER(t1);  WIPE_BUFFER(t2);  WIPE_BUFFER(t3);  WIPE_BUFFER(t4);
+    WIPE_BUFFER(t1);  WIPE_BUFFER(x1);  WIPE_BUFFER(z1);  WIPE_BUFFER(y1);
+    WIPE_BUFFER(t2);  WIPE_BUFFER(x2);  WIPE_BUFFER(z2);
+    WIPE_BUFFER(t3);  WIPE_BUFFER(x3);  WIPE_BUFFER(z3);
+    WIPE_BUFFER(t4);
 }
 
 static void ge_scalarmult_base(ge *p, const u8 scalar[32])
@@ -1519,15 +1517,15 @@ static void modL(u8 *r, i64 x[64])
         x[i] = 0;
     }
     i64 carry = 0;
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i] += carry - (x[31] >> 4) * L[i];
         carry = x[i] >> 8;
         x[i] &= 255;
     }
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i] -= carry * L[i];
     }
-    FOR(i, 0, 32) {
+    FOR (i, 0, 32) {
         x[i+1] += x[i] >> 8;
         r[i  ]  = x[i] & 255;
     }
@@ -1537,7 +1535,7 @@ static void modL(u8 *r, i64 x[64])
 static void reduce(u8 r[64])
 {
     i64 x[64];
-    FOR(i, 0, 64) {
+    FOR (i, 0, 64) {
         x[i] = (u64) r[i];
         r[i] = 0;
     }
@@ -1579,20 +1577,20 @@ void crypto_sign_init_first_pass(crypto_sign_ctx *ctx,
     // An actual random number would work just fine, and would save us
     // the trouble of hashing the message twice.  If we did that
     // however, the user could fuck it up and reuse the nonce.
-    HASH_INIT  (&(ctx->hash));
-    HASH_UPDATE(&(ctx->hash), prefix , 32);
+    HASH_INIT  (&ctx->hash);
+    HASH_UPDATE(&ctx->hash, prefix , 32);
 }
 
 void crypto_sign_update(crypto_sign_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    HASH_UPDATE(&(ctx->hash), msg, msg_size);
+    HASH_UPDATE(&ctx->hash, msg, msg_size);
 }
 
 void crypto_sign_init_second_pass(crypto_sign_ctx *ctx)
 {
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
-    HASH_FINAL(&(ctx->hash), r);
+    HASH_FINAL(&ctx->hash, r);
     reduce(r);
 
     // first half of the signature = "random" nonce times basepoint
@@ -1613,7 +1611,7 @@ void crypto_sign_final(crypto_sign_ctx *ctx, u8 signature[64])
     u8 *r        = ctx->buf + 32;
     u8 *half_sig = ctx->buf + 64;
     u8 h_ram[64];
-    HASH_FINAL(&(ctx->hash), h_ram);
+    HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);  // reduce the hash modulo L
 
     i64 s[64]; // s = r + h_ram * a
@@ -1653,14 +1651,14 @@ void crypto_check_init(crypto_check_ctx *ctx,
 {
     FOR (i, 0, 64) { ctx->sig[i] = signature [i]; }
     FOR (i, 0, 32) { ctx->pk [i] = public_key[i]; }
-    HASH_INIT  (&(ctx->hash));
-    HASH_UPDATE(&(ctx->hash), signature , 32);
-    HASH_UPDATE(&(ctx->hash), public_key, 32);
+    HASH_INIT  (&ctx->hash);
+    HASH_UPDATE(&ctx->hash, signature , 32);
+    HASH_UPDATE(&ctx->hash, public_key, 32);
 }
 
 void crypto_check_update(crypto_check_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    HASH_UPDATE(&(ctx->hash), msg , msg_size);
+    HASH_UPDATE(&ctx->hash, msg , msg_size);
 }
 
 int crypto_check_final(crypto_check_ctx *ctx)
@@ -1670,7 +1668,7 @@ int crypto_check_final(crypto_check_ctx *ctx)
     if (ge_frombytes_neg(&A, ctx->pk)) {       // -A
         return -1;
     }
-    HASH_FINAL(&(ctx->hash), h_ram);
+    HASH_FINAL(&ctx->hash, h_ram);
     reduce(h_ram);
     ge_scalarmult(&p, &A, h_ram);              // p    = -A*h_ram
     ge_scalarmult_base(&sB, ctx->sig + 32);
@@ -1708,44 +1706,66 @@ int crypto_key_exchange(u8       shared_key[32],
 ////////////////////////////////
 /// Authenticated encryption ///
 ////////////////////////////////
+static void lock_ad_padding(crypto_lock_ctx *ctx)
+{
+    static const u8 zero[15] = {0};
+    if (ctx->ad_phase) {
+        ctx->ad_phase = 0;
+        crypto_poly1305_update(&ctx->poly, zero, -ctx->ad_size & 15);
+    }
+}
+
 void crypto_lock_init(crypto_lock_ctx *ctx, const u8 key[32], const u8 nonce[24])
 {
-    u8 auth_key[32];
-    crypto_chacha20_x_init(&(ctx->chacha), key, nonce);
-    crypto_chacha20_stream(&(ctx->chacha), auth_key, 32);
-    crypto_poly1305_init  (&(ctx->poly  ), auth_key);
+    u8 auth_key[64]; // "Wasting" the whole Chacha block is faster
+    ctx->ad_phase     = 1;
+    ctx->ad_size      = 0;
+    ctx->message_size = 0;
+    crypto_chacha20_x_init(&ctx->chacha, key, nonce);
+    crypto_chacha20_stream(&ctx->chacha, auth_key, 64);
+    crypto_poly1305_init  (&ctx->poly  , auth_key);
     WIPE_BUFFER(auth_key);
 }
 
-void crypto_lock_encrypt(crypto_lock_ctx *ctx, u8 *cipher_text,
-                         const u8 *plain_text, size_t text_size)
+void crypto_lock_auth_ad(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
 {
-    crypto_chacha20_encrypt(&(ctx->chacha), cipher_text, plain_text, text_size);
+    crypto_poly1305_update(&ctx->poly, msg, msg_size);
+    ctx->ad_size += msg_size;
 }
 
-void crypto_lock_auth(crypto_lock_ctx *ctx, const u8 *msg, size_t msg_size)
+void crypto_lock_auth_message(crypto_lock_ctx *ctx,
+                              const u8 *cipher_text, size_t text_size)
 {
-    crypto_poly1305_update(&(ctx->poly), msg, msg_size);
+    lock_ad_padding(ctx);
+    ctx->message_size += text_size;
+    crypto_poly1305_update(&ctx->poly, cipher_text, text_size);
 }
 
 void crypto_lock_update(crypto_lock_ctx *ctx, u8 *cipher_text,
                         const u8 *plain_text, size_t text_size)
 {
-    crypto_lock_encrypt(ctx, cipher_text, plain_text, text_size);
-    crypto_lock_auth   (ctx, cipher_text, text_size);
+    crypto_chacha20_encrypt(&ctx->chacha, cipher_text, plain_text, text_size);
+    crypto_lock_auth_message(ctx, cipher_text, text_size);
 }
 
 void crypto_lock_final(crypto_lock_ctx *ctx, u8 mac[16])
 {
-    crypto_poly1305_final(&(ctx->poly), mac);
+    lock_ad_padding(ctx);
+    static const u8 zero[15] = {0};
+    u8 sizes[16];
+    store64_le(sizes + 0, ctx->ad_size);
+    store64_le(sizes + 8, ctx->message_size);
+    crypto_poly1305_update(&ctx->poly, zero, -ctx->message_size & 15);
+    crypto_poly1305_update(&ctx->poly, sizes, 16);
+    crypto_poly1305_final (&ctx->poly, mac);
     WIPE_CTX(ctx);
 }
 
 void crypto_unlock_update(crypto_lock_ctx *ctx, u8 *plain_text,
                           const u8 *cipher_text, size_t text_size)
 {
-    crypto_lock_auth   (ctx, cipher_text, text_size);
-    crypto_lock_encrypt(ctx, plain_text, cipher_text, text_size);
+    crypto_unlock_auth_message(ctx, cipher_text, text_size);
+    crypto_chacha20_encrypt(&ctx->chacha, plain_text, cipher_text, text_size);
 }
 
 int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
@@ -1757,7 +1777,7 @@ int crypto_unlock_final(crypto_lock_ctx *ctx, const u8 mac[16])
     return mismatch;
 }
 
-void crypto_aead_lock(u8        mac[16],
+void crypto_lock_aead(u8        mac[16],
                       u8       *cipher_text,
                       const u8  key[32],
                       const u8  nonce[24],
@@ -1765,24 +1785,23 @@ void crypto_aead_lock(u8        mac[16],
                       const u8 *plain_text, size_t text_size)
 {
     crypto_lock_ctx ctx;
-    crypto_lock_init  (&ctx, key, nonce);
-    // authenticate additional data first, to allow overlapping buffers
-    crypto_lock_auth  (&ctx, ad, ad_size);
-    crypto_lock_update(&ctx, cipher_text, plain_text, text_size);
-    crypto_lock_final (&ctx, mac);
+    crypto_lock_init   (&ctx, key, nonce);
+    crypto_lock_auth_ad(&ctx, ad, ad_size);
+    crypto_lock_update (&ctx, cipher_text, plain_text, text_size);
+    crypto_lock_final  (&ctx, mac);
 }
 
-int crypto_aead_unlock(u8       *plain_text,
+int crypto_unlock_aead(u8       *plain_text,
                        const u8  key[32],
                        const u8  nonce[24],
                        const u8  mac[16],
                        const u8 *ad         , size_t ad_size,
                        const u8 *cipher_text, size_t text_size)
 {
-    crypto_lock_ctx ctx;
-    crypto_lock_init(&ctx, key, nonce);
-    crypto_lock_auth(&ctx, ad, ad_size);
-    crypto_lock_auth(&ctx, cipher_text, text_size);
+    crypto_unlock_ctx ctx;
+    crypto_unlock_init        (&ctx, key, nonce);
+    crypto_unlock_auth_ad     (&ctx, ad, ad_size);
+    crypto_unlock_auth_message(&ctx, cipher_text, text_size);
     crypto_chacha_ctx chacha_ctx = ctx.chacha; // avoid the wiping...
     if (crypto_unlock_final(&ctx, mac)) {      // ...that occurs here
         WIPE_CTX(&chacha_ctx);
@@ -1799,7 +1818,7 @@ void crypto_lock(u8        mac[16],
                  const u8  nonce[24],
                  const u8 *plain_text, size_t text_size)
 {
-    crypto_aead_lock(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
+    crypto_lock_aead(mac, cipher_text, key, nonce, 0, 0, plain_text, text_size);
 }
 
 int crypto_unlock(u8       *plain_text,
@@ -1808,6 +1827,6 @@ int crypto_unlock(u8       *plain_text,
                   const u8  mac[16],
                   const u8 *cipher_text, size_t text_size)
 {
-    return crypto_aead_unlock(plain_text, key, nonce, mac, 0, 0,
+    return crypto_unlock_aead(plain_text, key, nonce, mac, 0, 0,
                               cipher_text, text_size);
 }

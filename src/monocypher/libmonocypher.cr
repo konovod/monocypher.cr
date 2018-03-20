@@ -1,4 +1,4 @@
-@[Link("monocypher", ldflags: "-L./../../.build/")]
+@[Link("monocypher", ldflags: "-L#{__DIR__}/../../.build")]
 lib LibMonocypher
   alias SizeT = LibC::SizeT
   alias Uint8T = UInt8
@@ -12,19 +12,22 @@ lib LibMonocypher
 
   # fun lock = crypto_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], plain_text : Uint8T*, text_size : SizeT)
   # fun unlock = crypto_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
-  # fun aead_lock = crypto_aead_lock(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
-  # fun aead_unlock = crypto_aead_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  # fun lock_aead = crypto_lock_aead(mac : Uint8T[16], cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
+  # fun unlock_aead = crypto_unlock_aead(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T[24], mac : Uint8T[16], ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
   # fun lock_init = crypto_lock_init(ctx : LockCtx*, key : Uint8T[32], nonce : Uint8T[24])
   # losing type safety to avoid excessive copying
   fun lock = crypto_lock(mac : Uint8T*, cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, plain_text : Uint8T*, text_size : SizeT)
   fun unlock = crypto_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
-  fun aead_lock = crypto_aead_lock(mac : Uint8T*, cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
-  fun aead_unlock = crypto_aead_unlock(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
+  fun lock_aead = crypto_lock_aead(mac : Uint8T*, cipher_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, ad : Uint8T*, ad_size : SizeT, plain_text : Uint8T*, text_size : SizeT)
+  fun unlock_aead = crypto_unlock_aead(plain_text : Uint8T*, key : Uint8T[32], nonce : Uint8T*, mac : Uint8T*, ad : Uint8T*, ad_size : SizeT, cipher_text : Uint8T*, text_size : SizeT) : LibC::Int
   fun lock_init = crypto_lock_init(ctx : LockCtx*, key : Uint8T[32], nonce : Uint8T*)
 
   struct LockCtx
     chacha : ChachaCtx
     poly : Poly1305Ctx
+    ad_size : Uint64T
+    message_size : Uint64T
+    ad_phase : LibC::Int
   end
 
   struct ChachaCtx
@@ -41,6 +44,8 @@ lib LibMonocypher
     c_idx : SizeT
   end
 
+  fun lock_auth_ad = crypto_lock_auth_ad(ctx : LockCtx*, message : Uint8T*, message_size : SizeT)
+  fun lock_auth_message = crypto_lock_auth_message(ctx : LockCtx*, cipher_text : Uint8T*, text_size : SizeT)
   fun lock_update = crypto_lock_update(ctx : LockCtx*, cipher_text : Uint8T*, plain_text : Uint8T*, text_size : SizeT)
   fun lock_final = crypto_lock_final(ctx : LockCtx*, mac : Uint8T[16])
   fun unlock_update = crypto_unlock_update(ctx : LockCtx*, plain_text : Uint8T*, cipher_text : Uint8T*, text_size : SizeT)
@@ -100,8 +105,6 @@ lib LibMonocypher
   fun poly1305_final = crypto_poly1305_final(ctx : Poly1305Ctx*, mac : Uint8T[16])
   fun x25519_public_key = crypto_x25519_public_key(public_key : Uint8T[32], secret_key : Uint8T[32])
   fun x25519 = crypto_x25519(raw_shared_secret : Uint8T[32], your_secret_key : Uint8T[32], their_public_key : Uint8T[32]) : LibC::Int
-  fun lock_encrypt = crypto_lock_encrypt(ctx : LockCtx*, cipher_text : Uint8T*, plain_text : Uint8T*, text_size : SizeT)
-  fun lock_auth = crypto_lock_auth(ctx : LockCtx*, message : Uint8T*, message_size : SizeT)
   fun sha512_init = crypto_sha512_init(ctx : Sha512Ctx*)
 
   struct Sha512Ctx

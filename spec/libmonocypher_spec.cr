@@ -14,11 +14,11 @@ describe "LibMonocypher" do
     smallbox = StaticArray(UInt8, 8).new(0_u8)
     aout = StaticArray(UInt8, 24).new(0_u8)
     # AEAD roundtrip
-    LibMonocypher.aead_lock(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
-    LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
+    LibMonocypher.lock_aead(mac, smallbox, key, nonce, ad, 4, plaintext, 8)
+    LibMonocypher.unlock_aead(aout, key, nonce, mac, ad, 4, smallbox, 8).should eq 0
     aout.to_slice[0, 8].should eq plaintext.to_slice
     mac[0] += 1
-    LibMonocypher.aead_unlock(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
+    LibMonocypher.unlock_aead(aout, key, nonce, mac, ad, 4, smallbox, 8).should_not eq 0
 
     # Authenticated roundtrip (easy interface)
     # LibMonocypher.lock(box, key, nonce, plaintext, 8)

@@ -48,9 +48,10 @@ typedef struct {
 
 // Signatures (EdDSA)
 #ifdef ED25519_SHA512
-typedef crypto_sha512_ctx crypto_hash_ctx;
+    #include "sha512.h"
+    typedef crypto_sha512_ctx crypto_hash_ctx;
 #else
-typedef crypto_blake2b_ctx crypto_hash_ctx;
+    typedef crypto_blake2b_ctx crypto_hash_ctx;
 #endif
 typedef struct {
     crypto_hash_ctx hash;
@@ -167,11 +168,11 @@ void crypto_argon2i(uint8_t       *hash,      uint32_t hash_size,     // >= 4
                     const uint8_t *password,  uint32_t password_size,
                     const uint8_t *salt,      uint32_t salt_size);
 
-void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size, // >= 4
-                            void          *work_area, uint32_t nb_blocks, // >= 8
-                            uint32_t       nb_iterations,                 // >= 1
+void crypto_argon2i_general(uint8_t       *hash,      uint32_t hash_size,// >= 4
+                            void          *work_area, uint32_t nb_blocks,// >= 8
+                            uint32_t       nb_iterations,                // >= 1
                             const uint8_t *password,  uint32_t password_size,
-                            const uint8_t *salt,      uint32_t salt_size, // >= 8
+                            const uint8_t *salt,      uint32_t salt_size,// >= 8
                             const uint8_t *key,       uint32_t key_size,
                             const uint8_t *ad,        uint32_t ad_size);
 

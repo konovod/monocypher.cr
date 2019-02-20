@@ -2,8 +2,8 @@
 
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 
-Note: Sources of Monocypher (version 2.0.1 currently) are included in the shard and will be linked statically with application.
-On the other hand, if libmonocypher.so is present in library paths, linker seems to prefer dynamic linking.
+Note: Sources of Monocypher (version 2.0.5 currently) are included in the shard and will be linked statically with application.
+On the other hand, if libmonocypher.so is present in library paths at the time of compilation, linker seems to prefer dynamic linking.
 
 ## Installation
 
@@ -65,6 +65,3 @@ Crypto.blake2b("abc".to_slice, key: "".to_slice, hash_size: 64).hexstring
 # same as Crypto.blake2b("abc".to_slice).hexstring
 # ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923
 ```
-
-
-## Plans

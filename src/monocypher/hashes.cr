@@ -2,7 +2,7 @@ require "./libmonocypher"
 
 module Crypto
   def self.sha512(data : Bytes) : Bytes
-    Bytes.new(512/8).tap do |result|
+    Bytes.new(512 // 8).tap do |result|
       LibMonocypher.sha512(result, data, data.size)
     end
   end

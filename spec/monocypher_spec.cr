@@ -61,11 +61,6 @@ describe Crypto do
 
     shared1.should eq shared2
     shared1.should_not eq shared3
-
-    public_bad = Crypto::PublicKey.new("0000000000000000000000000000000000000000000000000000000000000000")
-    expect_raises(Exception) do
-      Crypto::SymmetricKey.new(our_secret: secret1, their_public: public_bad)
-    end
   end
 
   it "sign messages" do

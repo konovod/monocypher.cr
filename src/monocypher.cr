@@ -43,8 +43,7 @@ module Crypto
   struct SymmetricKey
     def initialize(*, our_secret : SecretKey, their_public : PublicKey)
       @data = uninitialized UInt8[32]
-      result = LibMonocypher.key_exchange(@data, our_secret, their_public)
-      raise "can't generate public key" unless result == 0
+      LibMonocypher.key_exchange(@data, our_secret, their_public)
     end
   end
 

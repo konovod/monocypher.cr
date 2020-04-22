@@ -11,6 +11,8 @@ module Crypto
   StaticRecord.declare(PublicKey, 32, :none)
   StaticRecord.declare(PublicSigningKey, 32, :none)
   StaticRecord.declare(Signature, 64, :none)
+  StaticRecord.declare(Ed25519PublicSigningKey, 32, :none)
+  StaticRecord.declare(Ed25519Signature, 64, :none)
 
   struct SecretKey
     def initialize(*, password : String, salt : Salt)
@@ -23,6 +25,31 @@ module Crypto
         10,
         password, password.size,
         salt.to_slice, 16)
+    end
+  end
+
+  struct Ed25519PublicSigningKey
+    def initialize(*, secret : SecretKey)
+      @data = uninitialized UInt8[32]
+      LibMonocypher.ed25519_public_key(@data, secret)
+    end
+  end
+
+  struct Ed25519Signature
+    def initialize(message, *, secret : SecretKey, public : Ed25519PublicSigningKey)
+      @data = uninitialized UInt8[64]
+      LibMonocypher.ed25519_sign(@data, secret, public, message, message.size)
+    end
+
+    def initialize(message, *, secret : SecretKey)
+      @data = uninitialized UInt8[64]
+      public = Ed25519PublicSigningKey.new(secret: secret)
+      LibMonocypher.ed25519_public_key(public, secret)
+      LibMonocypher.ed25519_sign(@data, secret, public, message, message.size)
+    end
+
+    def check(message, *, public : Ed25519PublicSigningKey) : Bool
+      LibMonocypher.ed25519_check(@data, public, message, message.size) == 0
     end
   end
 
@@ -81,7 +108,7 @@ module Crypto
 
   def self.decrypt(*, output : Bytes, additional : Bytes? = nil, key : SymmetricKey, input : Bytes) : Bool
     raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
-    return LibMonocypher.unlock_aead(
+    LibMonocypher.unlock_aead(
       output,
       key,
       input[0, Nonce.size],

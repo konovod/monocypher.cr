@@ -9,7 +9,6 @@ describe "LibMonocypher" do
     nonce = UInt8.static_array(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
     ad = UInt8.static_array(3, 2, 1, 0)
     plaintext = UInt8.static_array(7, 6, 5, 4, 3, 2, 1, 0)
-    box = StaticArray(UInt8, 24).new(0_u8)
     mac = StaticArray(UInt8, 16).new(0_u8)
     smallbox = StaticArray(UInt8, 8).new(0_u8)
     aout = StaticArray(UInt8, 24).new(0_u8)

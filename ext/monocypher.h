@@ -1,4 +1,4 @@
-// Monocypher version 3.0.0
+// Monocypher version 3.1.1
 //
 // This file is dual-licensed.  Choose whichever licence you want from
 // the two licences listed below.
@@ -56,6 +56,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 ////////////////////////
 /// Type definitions ///
@@ -252,6 +256,23 @@ void crypto_check_init_custom_hash(crypto_check_ctx_abstract *ctx,
                                    const uint8_t public_key[32],
                                    const crypto_sign_vtable *hash);
 
+// EdDSA to X25519
+// ---------------
+void crypto_from_eddsa_private(uint8_t x25519[32], const uint8_t eddsa[32]);
+void crypto_from_eddsa_public (uint8_t x25519[32], const uint8_t eddsa[32]);
+
+// Elligator 2
+// -----------
+
+// Elligator mappings proper
+void crypto_hidden_to_curve(uint8_t curve [32], const uint8_t hidden[32]);
+int  crypto_curve_to_hidden(uint8_t hidden[32], const uint8_t curve [32],
+                            uint8_t tweak);
+
+// Easy to use key pair generation
+void crypto_hidden_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
+                            uint8_t seed[32]);
+
 ////////////////////////////
 /// Low level primitives ///
 ////////////////////////////
@@ -300,7 +321,6 @@ uint32_t crypto_ietf_chacha20_ctr(uint8_t       *cipher_text,
                                   const uint8_t  nonce[12],
                                   uint32_t       ctr);
 
-
 // Poly 1305
 // ---------
 
@@ -323,5 +343,20 @@ void crypto_x25519_public_key(uint8_t       public_key[32],
 void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
+
+// "Dirty" versions of x25519_public_key()
+// Only use to generate ephemeral keys you want to hide.
+void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
+void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
+
+// scalar division
+// ---------------
+void crypto_x25519_inverse(uint8_t       blind_salt [32],
+                           const uint8_t private_key[32],
+                           const uint8_t curve_point[32]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MONOCYPHER_H

@@ -1,10 +1,11 @@
 name: monocypher
-version: 3.0.0
+version: 3.1.1
 
 authors:
   - Konovod <konovod@gmail.com>
+  - Kingsley <kingsley@axentro.io>
 
-crystal: 0.32
+crystal: 0.35.1
 
 scripts:
   postinstall: "mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; cc ./ext/monocypher-ed25519.c -c -o ./.build/monocypher-ed25519.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocypher.a ./.build/monocypher.o ./.build/monocypher-ed25519.o"

@@ -1,4 +1,4 @@
-// Monocypher version 3.0.0
+// Monocypher version 3.1.1
 //
 // This file is dual-licensed.  Choose whichever licence you want from
 // the two licences listed below.
@@ -55,6 +55,10 @@
 #define ED25519_H
 
 #include "monocypher.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 ////////////////////////
 /// Type definitions ///
@@ -135,5 +139,11 @@ void crypto_ed25519_check_init(crypto_check_ctx_abstract *ctx,
 #define crypto_ed25519_check_update crypto_check_update
 #define crypto_ed25519_check_final crypto_check_final
 
+void crypto_from_ed25519_private(uint8_t x25519[32], const uint8_t eddsa[32]);
+#define crypto_from_ed25519_public crypto_from_eddsa_public
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ED25519_H

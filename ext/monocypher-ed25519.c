@@ -1,4 +1,4 @@
-// Monocypher version 3.0.0
+// Monocypher version 3.1.1
 //
 // This file is dual-licensed.  Choose whichever licence you want from
 // the two licences listed below.
@@ -57,11 +57,23 @@
 /// Utilities ///
 /////////////////
 #define FOR(i, min, max)     for (size_t i = min; i < max; i++)
+#define COPY(dst, src, size) FOR(i, 0, size) (dst)[i] = (src)[i]
+#define ZERO(buf, size)      FOR(i, 0, size) (buf)[i] = 0
 #define WIPE_CTX(ctx)        crypto_wipe(ctx   , sizeof(*(ctx)))
+#define WIPE_BUFFER(buffer)  crypto_wipe(buffer, sizeof(buffer))
 #define MIN(a, b)            ((a) <= (b) ? (a) : (b))
-#define ALIGN(x, block_size) ((~(x) + 1) & ((block_size) - 1))
 typedef uint8_t u8;
 typedef uint64_t u64;
+
+// returns the smallest positive integer y such that
+// (x + y) % pow_2  == 0
+// Basically, it's how many bytes we need to add to "align" x.
+// Only works when pow_2 is a power of 2.
+// Note: we use ~x+1 instead of -x to avoid compiler warnings
+static size_t align(size_t x, size_t pow_2)
+{
+    return (~x + 1) & (pow_2 - 1);
+}
 
 static u64 load64_be(const u8 s[8])
 {
@@ -159,12 +171,10 @@ static void sha512_compress(crypto_sha512_ctx *ctx)
 static void sha512_set_input(crypto_sha512_ctx *ctx, u8 input)
 {
     if (ctx->input_idx == 0) {
-        FOR (i, 0, 16) {
-            ctx->input[i] = 0;
-        }
+        ZERO(ctx->input, 16);
     }
-    size_t word = ctx->input_idx / 8;
-    size_t byte = ctx->input_idx % 8;
+    size_t word = ctx->input_idx >> 3;
+    size_t byte = ctx->input_idx &  7;
     ctx->input[word] |= (u64)input << (8 * (7 - byte));
 }
 
@@ -214,11 +224,14 @@ void crypto_sha512_init(crypto_sha512_ctx *ctx)
 void crypto_sha512_update(crypto_sha512_ctx *ctx,
                           const u8 *message, size_t message_size)
 {
+    if (message_size == 0) {
+        return;
+    }
     // Align ourselves with block boundaries
-    size_t align = MIN(ALIGN(ctx->input_idx, 128), message_size);
-    sha512_update(ctx, message, align);
-    message      += align;
-    message_size -= align;
+    size_t aligned = MIN(align(ctx->input_idx, 128), message_size);
+    sha512_update(ctx, message, aligned);
+    message      += aligned;
+    message_size -= aligned;
 
     // Process the message block by block
     FOR (i, 0, message_size / 128) { // number of blocks
@@ -243,9 +256,7 @@ void crypto_sha512_final(crypto_sha512_ctx *ctx, u8 hash[64])
     // compress penultimate block (if any)
     if (ctx->input_idx > 111) {
         sha512_compress(ctx);
-        FOR(i, 0, 14) {
-            ctx->input[i] = 0;
-        }
+        ZERO(ctx->input, 14);
     }
     // compress last block
     ctx->input[14] = ctx->input_size[0];
@@ -268,21 +279,15 @@ void crypto_sha512(u8 hash[64], const u8 *message, size_t message_size)
     crypto_sha512_final (&ctx, hash);
 }
 
-static void sha512_vtable_init(void *ctx)
-{
+static void sha512_vtable_init(void *ctx) {
     crypto_sha512_init(&((crypto_sign_ed25519_ctx*)ctx)->hash);
 }
-
-static void sha512_vtable_update(void *ctx, const u8 *m, size_t s)
-{
+static void sha512_vtable_update(void *ctx, const u8 *m, size_t s) {
     crypto_sha512_update(&((crypto_sign_ed25519_ctx*)ctx)->hash, m, s);
 }
-
-static void sha512_vtable_final(void *ctx, u8 *h)
-{
+static void sha512_vtable_final(void *ctx, u8 *h) {
     crypto_sha512_final(&((crypto_sign_ed25519_ctx*)ctx)->hash, h);
 }
-
 const crypto_sign_vtable crypto_sha512_vtable = {
     crypto_sha512,
     sha512_vtable_init,
@@ -393,4 +398,12 @@ int crypto_ed25519_check(const u8  signature [64],
     crypto_ed25519_check_init  (actx, signature, public_key);
     crypto_ed25519_check_update(actx, message, message_size);
     return crypto_ed25519_check_final(actx);
+}
+
+void crypto_from_ed25519_private(u8 x25519[32], const u8 eddsa[32])
+{
+    u8 a[64];
+    crypto_sha512(a, eddsa, 32);
+    COPY(x25519, a, 32);
+    WIPE_BUFFER(a);
 }

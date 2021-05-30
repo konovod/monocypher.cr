@@ -3,7 +3,7 @@ name: Linux CI
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - '*'
 

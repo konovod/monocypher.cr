@@ -1,4 +1,4 @@
-// Monocypher version 3.1.1
+// Monocypher version 3.1.2
 //
 // This file is dual-licensed.  Choose whichever licence you want from
 // the two licences listed below.

@@ -1,9 +1,13 @@
 # monocypher.cr
 
+[![Linux CI](https://github.com/Axentro/monocypher.cr/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/Axentro/monocypher.cr/actions/workflows/linux-ci.yml)
+
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 
 Note: Sources of Monocypher (version 3.1.2 currently) are included in the shard and will be linked statically with application.
 On the other hand, if libmonocypher.so is present in library paths at the time of compilation, linker seems to prefer dynamic linking.
+
+This repo was modified from the original to add support for the standard ED25519 crytography which Monocypher supplies as an optional component but which was not included in the original Crystal wrapper.
 
 ## Installation
 

@@ -63,11 +63,19 @@ describe Crypto do
     shared1.should_not eq shared3
   end
 
+  it "can sign and verify using Ed25519" do
+    secret1 = Crypto::SecretKey.new
+    public1 = Crypto::Ed25519PublicSigningKey.new(secret: secret1)
+
+    message = "12345678"
+    signature1 = Crypto::Ed25519Signature.new(message, secret: secret1, public: public1)
+    signature1.check("12345678", public: public1).should be_true
+  end
+
   it "sign messages" do
     secret1 = Crypto::SecretKey.new
     public1 = Crypto::PublicSigningKey.new(secret: secret1)
     secret2 = Crypto::SecretKey.new
-    public2 = Crypto::PublicSigningKey.new(secret: secret2)
 
     message = "12345678"
     signature1 = Crypto::Signature.new(message, secret: secret1, public: public1)

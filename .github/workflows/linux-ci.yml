@@ -1,0 +1,71 @@
+name: Linux CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+
+  pull_request:
+    branches:
+      - main
+
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  specs:
+    name: Specs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Crystal
+        uses: oprypin/install-crystal@v1
+        with:
+          crystal: 1.0.0
+
+      - name: Checkout source code
+        uses: actions/checkout@v2  
+
+      - name: Install shards
+        run: shards install --ignore-crystal-version
+
+      - name: Compile Monocypher
+        run: mkdir ./.build; cc ./ext/monocypher.c -c -o ./.build/monocypher.o -O3 -march=native -std=gnu99; cc ./ext/monocypher-ed25519.c -c -o ./.build/monocypher-ed25519.o -O3 -march=native -std=gnu99; ar rcs ./.build/libmonocypher.a ./.build/monocypher.o ./.build/monocypher-ed25519.o  
+
+      - name: Run specs
+        run: crystal spec --error-on-warnings --error-trace
+
+  check-format:
+    name: Check format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Crystal
+        uses: oprypin/install-crystal@v1
+        with:
+          crystal: 1.0.0
+
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Check sources format
+        run: crystal tool format --check
+
+  ameba:
+    name: Ameba linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Crystal
+        uses: oprypin/install-crystal@v1
+        with:
+          crystal: 1.0.0
+
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Install shards
+        run: shards install --ignore-crystal-version
+
+      - name: Run ameba
+        run: bin/ameba

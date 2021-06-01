@@ -7,7 +7,7 @@ Crystal wrapper for a cryptographic library Monocypher ([Official site](https://
 Note: Sources of Monocypher (version 3.1.2 currently) are included in the shard and will be linked statically with application.
 On the other hand, if libmonocypher.so is present in library paths at the time of compilation, linker seems to prefer dynamic linking.
 
-This repo was modified from the original to add support for the standard ED25519 crytography which Monocypher supplies as an optional component but which was not included in the original Crystal wrapper.
+Also included is the standard ED25519 cryptography which Monocypher supplies as an optional component.
 
 ## Installation
 
@@ -16,7 +16,7 @@ This repo was modified from the original to add support for the standard ED25519
 ```yaml
 dependencies:
   monocypher:
-    github: axentro/monocypher
+    github: konovod/monocypher
 ```
 
 2. `shards update` will install a shard and compile Monocypher static library. So you need clang or gcc.

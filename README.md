@@ -1,6 +1,7 @@
 # monocypher.cr
 
 [![Linux CI](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml)
+[![MacOSX CI](https://github.com/konovod/monocypher.cr/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/macos-ci.yml)
 
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 

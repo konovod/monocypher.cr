@@ -1,6 +1,5 @@
-name: Linux CI
+name: MacOS CI
 
-on:
 on:
   push:
     branches: [ master ]

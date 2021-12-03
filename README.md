@@ -1,6 +1,6 @@
 # monocypher.cr
 
-[![Linux CI](https://github.com/Axentro/monocypher.cr/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/Axentro/monocypher.cr/actions/workflows/linux-ci.yml)
+[![Linux CI](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml)
 
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 

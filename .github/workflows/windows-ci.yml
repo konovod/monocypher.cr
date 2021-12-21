@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Install Crystal
         uses: oprypin/install-crystal@v1.5.3
+        with: 
+          shards: false
       - name: Checkout source code
         uses: actions/checkout@v2  
 

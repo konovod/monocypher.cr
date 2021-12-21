@@ -15,10 +15,7 @@ jobs:
 
     steps:
       - name: Install Crystal
-        uses: oprypin/install-crystal@v1
-        with:
-          crystal: latest
-
+        uses: oprypin/install-crystal@v1.5.3
       - name: Checkout source code
         uses: actions/checkout@v2  
 

@@ -2,6 +2,7 @@
 
 [![Linux CI](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/linux-ci.yml)
 [![MacOSX CI](https://github.com/konovod/monocypher.cr/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/macos-ci.yml)
+[![Windows CI](https://github.com/konovod/monocypher.cr/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/konovod/monocypher.cr/actions/workflows/windows-ci.yml)
 
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 
@@ -21,6 +22,16 @@ dependencies:
 ```
 
 2. `shards update` will install a shard and compile Monocypher static library. So you need clang or gcc.
+
+    2.1. On Windows: 
+  currently, shards way isn't supported, but you can compile monocypher manually using following commands(from visual studio development prompt):
+    ```
+    cd ext
+    cl /c /EHsc /O2 /MT monocypher.c 
+    cl /c /EHsc /O2 /MT monocypher-ed25519.c
+    lib monocypher.obj monocypher-ed25519.obj
+    ```    
+    and then copy `monocypher.lib` file to where your Crystal looks for lib files.
 
 ## Usage
 

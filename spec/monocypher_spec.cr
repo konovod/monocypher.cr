@@ -98,7 +98,7 @@ describe Crypto do
     Crypto.decrypt(key: key, input: ciphertext, output: result).should be_true
     String.new(result).should eq message
 
-    ciphertext.to_unsafe[0] += 1
+    ciphertext.to_unsafe[0] &+= 1
     Crypto.decrypt(key: key, input: ciphertext, output: result).should be_false
   end
 

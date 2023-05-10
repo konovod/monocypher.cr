@@ -55,37 +55,35 @@ describe Crypto do
     public1 = Crypto::PublicKey.new(secret: secret1)
     public2 = Crypto::PublicKey.new(secret: secret2)
 
-    shared1 = Crypto::SymmetricKey.new(our_secret: secret1, their_public: public2)
-    shared2 = Crypto::SymmetricKey.new(our_secret: secret2, their_public: public1)
-    shared3 = Crypto::SymmetricKey.new(our_secret: secret1, their_public: public1)
+    shared1 = Crypto::SymmetricKey.new(secret1: secret1, public2: public2)
+    shared2 = Crypto::SymmetricKey.new(secret2: secret2, public1: public1)
+    shared3 = Crypto::SymmetricKey.new(secret1: secret1, public2: public1)
 
     shared1.should eq shared2
     shared1.should_not eq shared3
   end
 
   it "can sign and verify using Ed25519" do
-    secret1 = Crypto::SecretKey.new
-    public1 = Crypto::Ed25519PublicSigningKey.new(secret: secret1)
+    secret1, public1 = Crypto.generate_ed25519_keys
 
     message = "12345678"
-    signature1 = Crypto::Ed25519Signature.new(message, secret: secret1, public: public1)
-    signature1.check("12345678", public: public1).should be_true
+    signature1 = Crypto::Ed25519Signature.new(message.to_slice, secret: secret1)
+    signature1.check("12345678".to_slice, public: public1).should be_true
   end
 
   it "sign messages" do
-    secret1 = Crypto::SecretKey.new
-    public1 = Crypto::PublicSigningKey.new(secret: secret1)
-    secret2 = Crypto::SecretKey.new
+    secret1, public1 = Crypto.generate_signing_keys
+    secret2, public2 = Crypto.generate_signing_keys
 
     message = "12345678"
-    signature1 = Crypto::Signature.new(message, secret: secret1, public: public1)
-    signature11 = Crypto::Signature.new(message, secret: secret1)
-    signature2 = Crypto::Signature.new(message, secret: secret2, public: public1)
+    signature1 = Crypto::Signature.new(message.to_slice, secret: secret1)
+    signature11 = Crypto::Signature.new(message.to_slice, secret: secret1)
+    signature2 = Crypto::Signature.new(message.to_slice, secret: secret2)
 
     signature1.should eq signature11
-    signature1.check("12345678", public: public1).should be_true
-    signature1.check("123456789", public: public1).should be_false
-    signature2.check("12345678", public: public1).should be_false
+    signature1.check("12345678".to_slice, public: public1).should be_true
+    signature1.check("123456789".to_slice, public: public1).should be_false
+    signature2.check("12345678".to_slice, public: public1).should be_false
   end
 
   it "does symmetric cryptography" do
@@ -127,7 +125,7 @@ describe Crypto do
     spawn do
       client_secret = Crypto::SecretKey.new
       client_public = Crypto::PublicKey.new(secret: client_secret)
-      client_shared = Crypto::SymmetricKey.new(our_secret: client_secret, their_public: server_public)
+      client_shared = Crypto::SymmetricKey.new(secret2: client_secret, public1: server_public)
       message = "my_login".to_slice
       ciphertext = Bytes.new(message.size + Crypto::OVERHEAD_SYMMETRIC)
       add_data = client_public.to_slice
@@ -147,8 +145,8 @@ describe Crypto do
       ciphertext = channel.receive
       req_key = channel.receive
       server_shared = Crypto::SymmetricKey.new(
-        our_secret: server_secret,
-        their_public: Crypto::PublicKey.from_bytes(req_key))
+        secret1: server_secret,
+        public2: Crypto::PublicKey.from_bytes(req_key))
       request_decoded = Bytes.new(ciphertext.size - Crypto::OVERHEAD_SYMMETRIC)
       Crypto.decrypt(key: server_shared, input: ciphertext, output: request_decoded, additional: req_key)
       String.new(request_decoded).should eq "my_login"

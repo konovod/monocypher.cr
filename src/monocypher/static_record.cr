@@ -48,6 +48,10 @@ module Crypto::StaticRecord
         @data.to_slice
       end
 
+      def wipe
+        LibMonocypher.wipe( @data, {{size}})
+      end
+
       def self.size
         {{size}}
       end

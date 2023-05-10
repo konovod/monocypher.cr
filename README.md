@@ -6,7 +6,7 @@
 
 Crystal wrapper for a cryptographic library Monocypher ([Official site](https://monocypher.org), [Github page](https://github.com/LoupVaillant/Monocypher))
 
-Note: Sources of Monocypher (version 3.1.2 currently) are included in the shard and will be linked statically with application.
+Note: Sources of Monocypher (version 4.0.1 currently) are included in the shard and will be linked statically with application.
 On the other hand, if libmonocypher.so is present in library paths at the time of compilation, linker seems to prefer dynamic linking.
 
 Also included is the standard ED25519 cryptography which Monocypher supplies as an optional component.
@@ -53,7 +53,7 @@ bob_public = Crypto::PublicKey.new(secret: bob_secret)
 
 # sender part
 spawn do
-  alice_shared = Crypto::SymmetricKey.new(our_secret: alice_secret, their_public: bob_public)
+  alice_shared = Crypto::SymmetricKey.new(secret1: alice_secret, public2: bob_public)
   message = "This is a test message русский текст"
   plaintext = message.to_slice
   ciphertext = Bytes.new(plaintext.size + Crypto::OVERHEAD_SYMMETRIC)
@@ -62,7 +62,7 @@ spawn do
 end
 
 # receiver part
-bob_shared = Crypto::SymmetricKey.new(our_secret: bob_secret, their_public: alice_public)
+bob_shared = Crypto::SymmetricKey.new(secret2: bob_secret, public1: alice_public)
 ciphertext = channel.receive
 result = Bytes.new(ciphertext.size - Crypto::OVERHEAD_SYMMETRIC)
 Crypto.decrypt(key: bob_shared, input: ciphertext, output: result)

@@ -11,9 +11,9 @@ module Crypto
   def self.blake2b(data : Bytes, *, hash_size : Int32 = 64, key : Bytes? = nil) : Bytes
     Bytes.new(hash_size).tap do |result|
       if key
-        LibMonocypher.blake2b_general(result, hash_size, key, key.size, data, data.size)
+        LibMonocypher.blake2b_keyed(result, hash_size, key, key.size, data, data.size)
       else
-        LibMonocypher.blake2b_general(result, hash_size, nil, 0, data, data.size)
+        LibMonocypher.blake2b(result, hash_size, data, data.size)
       end
     end
   end
@@ -50,7 +50,7 @@ module Crypto
     class Blake2b < ::Digest
       @ctx = LibMonocypher::Blake2bCtx.new
 
-      def initialize
+      def initialize(@hash_size = 64)
         reset_impl
       end
 
@@ -66,7 +66,7 @@ module Crypto
 
       # Resets the object to it's initial state.
       def reset_impl : Nil
-        LibMonocypher.blake2b_init(pointerof(@ctx))
+        LibMonocypher.blake2b_init(pointerof(@ctx), @hash_size)
       end
 
       # Returns the digest output size in bytes.

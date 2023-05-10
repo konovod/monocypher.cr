@@ -44,6 +44,14 @@ module Crypto::StaticRecord
         return Crypto::Subtle.constant_time_compare(to_slice, other.to_slice)
       end
 
+      def ==(other : self) : Bool
+        compare(other)
+      end
+
+      def ==(other) : Bool
+        false
+      end
+
       def to_slice
         @data.to_slice
       end

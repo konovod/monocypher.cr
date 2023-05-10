@@ -166,4 +166,12 @@ describe Crypto do
     nonce.reroll
     nonce2.compare(nonce).should be_false
   end
+
+  it "compare of different types return false" do
+    secret = Crypto::SecretKey.new("5f5ade01649f59af5de9310fb967966e5c4715fff4ed8c41cd229a618f268872")
+    secret2 = Crypto::SecretKey.new("5f5ade01649f59af5de9310fb967966e5c4715fff4ed8c41cd229a618f268872")
+    public = Crypto::PublicKey.new("5f5ade01649f59af5de9310fb967966e5c4715fff4ed8c41cd229a618f268872")
+    (secret == public).should be_false
+    (secret == secret2).should be_true
+  end
 end

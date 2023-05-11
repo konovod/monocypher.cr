@@ -68,6 +68,10 @@ module Crypto
       # `hash_size` - Length of hash, in bytes. Must be between 1 and 64. Anything below 32 is discouraged when using BLAKE2b as a general-purpose hash function.
       # `key` - Some secret key. When uniformly random, one cannot predict the final hash without it.
       def initialize(@hash_size = 64, @key : Bytes? = nil)
+        raise ArgumentError.new("hash_size must be between 1 and 64, received #{@hash_size}") unless (1..64).includes? @hash_size
+        if key = @key
+          raise ArgumentError.new("key.size must be between 0 and 64, received #{key.size}") unless (0..64).includes? key.size
+        end
         reset_impl
       end
 

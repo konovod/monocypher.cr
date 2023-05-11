@@ -9,6 +9,14 @@ module Crypto
     end
   end
 
+  # Calculate HMAC with SHA-512, that can be used for message authentication codes or as a random oracle.
+  def self.sha512_hmac(data : Bytes, key : Bytes) : Bytes
+    raise ArgumentError.new("key must not be empty") if key.size == 0
+    Bytes.new(512 // 8).tap do |result|
+      LibMonocypher.sha512_hmac(result, key, key.size, data, data.size)
+    end
+  end
+
   # Calculate BLAKE2b hash of `data`, result will have `hash_size` bytes.
   #
   # `hash_size` - Length of hash, in bytes. Must be between 1 and 64. Anything below 16 is discouraged when using BLAKE2b as a message authentication code.
@@ -49,6 +57,38 @@ module Crypto
       # Resets the object to it's initial state.
       def reset_impl : Nil
         LibMonocypher.sha512_init(pointerof(@ctx))
+      end
+
+      # Returns the digest output size in bytes.
+      def digest_size : Int32
+        64
+      end
+    end
+
+    # Implement HMAC with SHA-512, and can be used for message authentication codes or as a random oracle.
+    #
+    # See [Crystal API docs](https://crystal-lang.org/api/latest/Digest.html) for details on how to use `Digest` interface
+    class SHA512_HMAC < ::Digest
+      @ctx = LibMonocypher::Sha512HmacCtx.new
+
+      def initialize(@key : Bytes)
+        raise ArgumentError.new("key must not be empty") if key.size == 0
+        reset_impl
+      end
+
+      # Hashes data incrementally.
+      def update_impl(data : Bytes) : Nil
+        LibMonocypher.sha512_hmac_update(pointerof(@ctx), data, data.size)
+      end
+
+      # Stores the output digest of #digest_size bytes in dst.
+      def final_impl(dst : Bytes) : Nil
+        LibMonocypher.sha512_hmac_final(pointerof(@ctx), dst)
+      end
+
+      # Resets the object to it's initial state.
+      def reset_impl : Nil
+        LibMonocypher.sha512_hmac_init(pointerof(@ctx), @key, @key.size)
       end
 
       # Returns the digest output size in bytes.

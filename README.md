@@ -103,7 +103,7 @@ Highlevel wrapper status:
 | Memory Wipe | Done |  |
 | Authenticated Encryption | Partially done | TODO - streaming interface |
 | Blake2b Hash | Done |  |
-| SHA-512 hash | Partially done | TODO - hmac and hkdf modes |
+| SHA-512 hash | Partially done | TODO - hkdf mode |
 | Password Key Derivation | Partially done | TODO - expose additional options in high-level interface |
 | X25519 Key Exchange | Partially done | TODO - Generating pair |
 | Public Key Signatures | Partially done | TODO - XEdDSA implementation |

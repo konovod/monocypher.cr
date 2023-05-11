@@ -206,8 +206,8 @@ lib LibMonocypher
 
   fun sha512_hmac_init = crypto_sha512_hmac_init(ctx : Sha512HmacCtx*, key : UInt8*, key_size : SizeT)
   fun sha512_hmac_update = crypto_sha512_hmac_update(ctx : Sha512HmacCtx*, message : UInt8*, message_size : SizeT)
-  fun sha512_hmac_final = crypto_sha512_hmac_final(ctx : Sha512HmacCtx*, hmac : UInt8[64])
-  fun sha512_hmac = crypto_sha512_hmac(hmac : UInt8[64], key : UInt8*, key_size : SizeT, message : UInt8*, message_size : SizeT)
+  fun sha512_hmac_final = crypto_sha512_hmac_final(ctx : Sha512HmacCtx*, hmac : UInt8*)
+  fun sha512_hmac = crypto_sha512_hmac(hmac : UInt8*, key : UInt8*, key_size : SizeT, message : UInt8*, message_size : SizeT)
 
   # SHA 512 HKDF
   # --------------------------------------

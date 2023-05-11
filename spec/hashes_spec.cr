@@ -62,4 +62,10 @@ describe Crypto::Digest::BLAKE2b do
     digest << "123"
     digest.final.should eq Crypto.blake2b("123".to_slice)
   end
+
+  it "can be initialized with custom parameters" do
+    digest = Crypto::Digest::BLAKE2b.new(hash_size: 32, key: Bytes.new(16))
+    digest << "123"
+    digest.final.size.should eq 32
+  end
 end

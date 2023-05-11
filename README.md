@@ -87,7 +87,31 @@ There is also `Digest` interface used in Crystal stdlib:
   digest << "123"
   digest.final.hexstring  # "3c9909afec25354d551dae21590bb26e38d53f2173b8d3dc3eee4c047e7ab1c1eb8b85103e3be7ba613b31bb5c9c36214dc9f14a42fd7a2fdb84856bca5c44c2"
 
-  digest = Crypto::Digest::BLAKE2b.new
+  digest = Crypto::Digest::BLAKE2b.new(key: "".to_slice, hash_size: 64)
   digest << "123"
   digest.final.hexstring  # "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
 ```
+
+## Development status
+Lowlevel wrapper currently covers all of Monocypher 4.0.1 release and can be called directly.
+
+Highlevel wrapper status:
+
+|Area | Status | Comment |
+|-----|--------|---------|
+| Constant Time Comparison | Not planned | Already in stdlib: see https://crystal-lang.org/api/1.7.2/Crypto/Subtle.html |
+| Memory Wipe | Done |  |
+| Authenticated Encryption | Partially done | TODO - streaming interface |
+| Blake2b Hash | Done |  |
+| SHA-512 hash | Partially done | TODO - hmac and hkdf modes |
+| Password Key Derivation | Partially done | TODO - expose additional options in high-level interface |
+| X25519 Key Exchange | Partially done | TODO - Generating pair |
+| Public Key Signatures | Partially done | TODO - XEdDSA implementation |
+| Ed25519 | Done |  |
+| ChaCha20 | - | Is high-level wrapper needed? |
+| Poly1305 | - | Is high-level wrapper needed? |
+| Elligator | - | Is high-level wrapper needed? |
+
+Other planned features:
+ - [ ] Inline docs for everything
+ - [ ] Input size checking everywhere

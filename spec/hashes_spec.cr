@@ -70,7 +70,7 @@ describe Crypto::Digest::BLAKE2b do
   end
 
   it "verifies size of digest parameters" do
-    expect_raises(ArgumentError) { digest = Crypto::Digest::BLAKE2b.new(hash_size: 128) }
-    expect_raises(ArgumentError) { digest = Crypto::Digest::BLAKE2b.new(key: Bytes.new(128)) }
+    expect_raises(ArgumentError) { Crypto::Digest::BLAKE2b.new(hash_size: 128) }
+    expect_raises(ArgumentError) { Crypto::Digest::BLAKE2b.new(key: Bytes.new(128)) }
   end
 end

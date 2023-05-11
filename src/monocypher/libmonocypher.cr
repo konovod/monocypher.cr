@@ -46,7 +46,7 @@ lib LibMonocypher
 
   # Incremental interface
 
-  struct Blake2bCtx
+  struct BLAKE2bCtx
     hash : UInt64[8]
     input_offset : UInt64[2]
     input : UInt64[16]
@@ -54,10 +54,10 @@ lib LibMonocypher
     hash_size : SizeT
   end
 
-  fun blake2b_init = crypto_blake2b_init(ctx : Blake2bCtx*, hash_size : SizeT)
-  fun blake2b_keyed_init = crypto_blake2b_general_init(ctx : Blake2bCtx*, hash_size : SizeT, key : UInt8*, key_size : SizeT)
-  fun blake2b_update = crypto_blake2b_update(ctx : Blake2bCtx*, message : UInt8*, message_size : SizeT)
-  fun blake2b_final = crypto_blake2b_final(ctx : Blake2bCtx*, hash : UInt8*)
+  fun blake2b_init = crypto_blake2b_init(ctx : BLAKE2bCtx*, hash_size : SizeT)
+  fun blake2b_keyed_init = crypto_blake2b_general_init(ctx : BLAKE2bCtx*, hash_size : SizeT, key : UInt8*, key_size : SizeT)
+  fun blake2b_update = crypto_blake2b_update(ctx : BLAKE2bCtx*, message : UInt8*, message_size : SizeT)
+  fun blake2b_final = crypto_blake2b_final(ctx : BLAKE2bCtx*, hash : UInt8*)
 
   # Password key derivation (Argon2)
   # --------------------------------------

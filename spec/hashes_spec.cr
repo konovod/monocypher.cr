@@ -56,9 +56,9 @@ describe Crypto::Digest::SHA512 do
   end
 end
 
-describe Crypto::Digest::Blake2b do
+describe Crypto::Digest::BLAKE2b do
   it "support Crystal interface of hashes" do
-    digest = Crypto::Digest::Blake2b.new
+    digest = Crypto::Digest::BLAKE2b.new
     digest << "123"
     digest.final.should eq Crypto.blake2b("123".to_slice)
   end

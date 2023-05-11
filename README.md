@@ -72,7 +72,7 @@ puts String.new(result)
 check `spec` dir for more usage examples (TODO - other examples)
 
 ## Hashes
-Monocypher includes functions for cryptographic hashes Blake2b and SHA-512, they are wrapped with simple crystal functions
+Monocypher includes functions for cryptographic hashes BLAKE2b and SHA-512, they are wrapped with simple crystal functions
 ```crystal
 Crypto.sha512("".to_slice).hexstring
 # "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
@@ -87,7 +87,7 @@ There is also `Digest` interface used in Crystal stdlib:
   digest << "123"
   digest.final.hexstring  # "3c9909afec25354d551dae21590bb26e38d53f2173b8d3dc3eee4c047e7ab1c1eb8b85103e3be7ba613b31bb5c9c36214dc9f14a42fd7a2fdb84856bca5c44c2"
 
-  digest = Crypto::Digest::Blake2b.new
+  digest = Crypto::Digest::BLAKE2b.new
   digest << "123"
   digest.final.hexstring  # "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923"
 ```

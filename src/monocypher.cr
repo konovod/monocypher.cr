@@ -49,7 +49,7 @@ module Crypto
     def initialize(*, secret1 : SecretKey, public1 : PublicKey, public2 : PublicKey)
       @data = uninitialized UInt8[32]
       LibMonocypher.x25519(@data, secret1, public2)
-      ctx = LibMonocypher::Blake2bCtx.new
+      ctx = LibMonocypher::BLAKE2bCtx.new
       LibMonocypher.blake2b_init(pointerof(ctx), 32)
       LibMonocypher.blake2b_update(pointerof(ctx), @data, 32)
       LibMonocypher.blake2b_update(pointerof(ctx), public1.to_slice, 32)
@@ -60,7 +60,7 @@ module Crypto
     def initialize(*, secret2 : SecretKey, public1 : PublicKey, public2 : PublicKey)
       @data = uninitialized UInt8[32]
       LibMonocypher.x25519(@data, secret2, public1)
-      ctx = LibMonocypher::Blake2bCtx.new
+      ctx = LibMonocypher::BLAKE2bCtx.new
       LibMonocypher.blake2b_init(pointerof(ctx), 32)
       LibMonocypher.blake2b_update(pointerof(ctx), @data, 32)
       LibMonocypher.blake2b_update(pointerof(ctx), public1.to_slice, 32)
@@ -80,7 +80,7 @@ module Crypto
     # def self.create_pair(our_secret : SecretKey, our_public : PublicKey, their_public : PublicKey)
     #   adata = Bytes.new(64)
     #   LibMonocypher.x25519(@data, our_secret, their_public)
-    #   ctx = LibMonocypher::Blake2bCtx.new
+    #   ctx = LibMonocypher::BLAKE2bCtx.new
     #   LibMonocypher.blake2b_init(pointerof(ctx), 64)
     #   LibMonocypher.blake2b_update(pointerof(ctx), @data, 32)
     #   LibMonocypher.blake2b_update(pointerof(ctx), our_public.to_slice, 32)

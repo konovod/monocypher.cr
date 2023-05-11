@@ -2,12 +2,19 @@ require "./libmonocypher"
 require "digest/digest"
 
 module Crypto
+  # Calculate SHA-512 hash of `data`
   def self.sha512(data : Bytes) : Bytes
     Bytes.new(512 // 8).tap do |result|
       LibMonocypher.sha512(result, data, data.size)
     end
   end
 
+  # Calculate BLAKE2b hash of `data`, result will have `hash_size` bytes.
+  #
+  # `hash_size` - Length of hash, in bytes. Must be between 1 and 64. Anything below 16 is discouraged when using BLAKE2b as a message authentication code.
+  # Anything below 32 is discouraged when using BLAKE2b as a key derivation function (KDF).
+  #
+  # `key` - Some secret key. When uniformly random, one cannot predict the final hash without it.
   def self.blake2b(data : Bytes, *, hash_size : Int32 = 64, key : Bytes? = nil) : Bytes
     Bytes.new(hash_size).tap do |result|
       if key
@@ -19,6 +26,9 @@ module Crypto
   end
 
   module Digest
+    # SHA-512, a cryptographically secure hash
+    #
+    # See [Crystal API docs](https://crystal-lang.org/api/latest/Digest.html) for details on how to use `Digest` interface
     class SHA512 < ::Digest
       @ctx = LibMonocypher::Sha512Ctx.new
 
@@ -47,9 +57,13 @@ module Crypto
       end
     end
 
-    class Blake2b < ::Digest
-      @ctx = LibMonocypher::Blake2bCtx.new
+    # BLAKE2b, a cryptographically secure hash based on the ideas of ChaCha20.
+    #
+    # See [Crystal API docs](https://crystal-lang.org/api/latest/Digest.html) for details on how to use `Digest` interface
+    class BLAKE2b < ::Digest
+      @ctx = LibMonocypher::BLAKE2bCtx.new
 
+      # hash_size - Length of hash, in bytes. Must be between 1 and 64. Anything below 32 is discouraged when using BLAKE2b as a general-purpose hash function.
       def initialize(@hash_size = 64)
         reset_impl
       end
@@ -71,7 +85,7 @@ module Crypto
 
       # Returns the digest output size in bytes.
       def digest_size : Int32
-        64
+        @hash_size
       end
     end
   end

@@ -18,7 +18,7 @@ Benchmark.ips do |bench|
     digest2 << buffer
     x2 = digest2.final
   end
-  digest3 = Crypto::Digest::Blake2b.new
+  digest3 = Crypto::Digest::BLAKE2b.new
   bench.report("Monocypher blake2b") do
     digest3.reset
     digest3 << buffer

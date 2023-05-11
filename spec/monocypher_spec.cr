@@ -73,7 +73,7 @@ describe Crypto do
 
   it "sign messages" do
     secret1, public1 = Crypto.generate_signing_keys
-    secret2, public2 = Crypto.generate_signing_keys
+    secret2, _ = Crypto.generate_signing_keys
 
     message = "12345678"
     signature1 = Crypto::Signature.new(message.to_slice, secret: secret1)

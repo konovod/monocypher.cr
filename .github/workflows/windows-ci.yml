@@ -2,9 +2,9 @@ name: Windows CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
   schedule:
     - cron: "0 6 * * 1"
 
@@ -17,16 +17,16 @@ jobs:
       - name: Install Crystal
         uses: oprypin/install-crystal@v1
       - name: Checkout source code
-        uses: actions/checkout@v2  
+        uses: actions/checkout@v2
       - name: Set up Visual Studio shell
         uses: egor-tensin/vs-shell@v2
       - name: Compile Monocypher
-        shell: cmd
+        shell: powershell
         run: |
-            cd ext
-            cl /c /EHsc /O2 /MT monocypher.c 
-            cl /c /EHsc /O2 /MT monocypher-ed25519.c
-            lib monocypher.obj monocypher-ed25519.obj
-            copy monocypher.lib D:\a\_temp\crystal-nightly-true-undefined\lib
+          cd ext
+          cl /c /EHsc /O2 /MT monocypher.c 
+          cl /c /EHsc /O2 /MT monocypher-ed25519.c
+          lib monocypher.obj monocypher-ed25519.obj
+          copy monocypher.lib (crystal env CRYSTAL_LIBRARY_PATH)
       - name: Run specs
         run: crystal spec --error-on-warnings --error-trace

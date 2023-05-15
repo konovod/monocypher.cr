@@ -75,12 +75,12 @@ describe Crypto::Digest::BLAKE2b do
   end
 end
 
-describe Crypto::Digest::SHA512_HMAC do
+describe Crypto::Digest::SHA512HMAC do
   it "support Crystal interface of hashes" do
     key = "12345".to_slice
-    digest = Crypto::Digest::SHA512_HMAC.new(key)
+    digest = Crypto::Digest::SHA512HMAC.new(key)
     digest << "123"
     digest.final.should eq Crypto.sha512_hmac("123".to_slice, key)
-    expect_raises(ArgumentError) { Crypto::Digest::SHA512_HMAC.new("".to_slice) }
+    expect_raises(ArgumentError) { Crypto::Digest::SHA512HMAC.new("".to_slice) }
   end
 end

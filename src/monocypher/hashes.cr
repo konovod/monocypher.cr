@@ -68,7 +68,7 @@ module Crypto
     # Implement HMAC with SHA-512, and can be used for message authentication codes or as a random oracle.
     #
     # See [Crystal API docs](https://crystal-lang.org/api/latest/Digest.html) for details on how to use `Digest` interface
-    class SHA512_HMAC < ::Digest
+    class SHA512HMAC < ::Digest
       @ctx = LibMonocypher::Sha512HmacCtx.new
 
       def initialize(@key : Bytes)

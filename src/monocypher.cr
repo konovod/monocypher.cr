@@ -6,7 +6,7 @@ module Crypto
   StaticRecord.declare(SymmetricKey, 32, :random)
   StaticRecord.declare(Salt, 16, :random)
   StaticRecord.declare(Nonce, 24, :random)
-  StaticRecord.declare(Header, 16, :zero)
+  StaticRecord.declare(MAC, 16, :zero)
   StaticRecord.declare(SecretKey, 32, :random)
   StaticRecord.declare(PublicKey, 32, :none)
 
@@ -158,29 +158,31 @@ module Crypto
   def self.encrypt(*, output : Bytes, key : SymmetricKey, input : Bytes, additional : Bytes? = nil) : Nil
     raise "data sizes doesn't match" if output.size != input.size + OVERHEAD_SYMMETRIC
     nonce = Nonce.new
+    text_size = input.size
     LibMonocypher.aead_lock(
-      output[Nonce.size + Header.size, input.size], # cipher_text
-      output[Nonce.size, Header.size],              # mac
+      output[Nonce.size, text_size],                # cipher_text
+      output[Nonce.size + text_size, MAC.size],     # mac
       key,                                          # key
       nonce.to_slice,                               # nonce
       additional, additional ? additional.size : 0, # ad, ad_size
       input,                                        # plain_text
-      input.size    )                               # text_size
+      text_size    )                                # text_size
     output[0, Nonce.size].copy_from nonce.to_slice
   end
 
   def self.decrypt(*, output : Bytes, additional : Bytes? = nil, key : SymmetricKey, input : Bytes) : Bool
-    raise "data sizes doesn't match" if input.size != output.size + OVERHEAD_SYMMETRIC
+    text_size = output.size
+    raise "data sizes doesn't match" if input.size != text_size + OVERHEAD_SYMMETRIC
     LibMonocypher.aead_unlock(
       output,                                       # plain_text
-      input[Nonce.size, Header.size],               # mac
+      input[Nonce.size + text_size, MAC.size],      # mac
       key,                                          # key
       input[0, Nonce.size],                         # nonce
       additional, additional ? additional.size : 0, # ad, ad_size
-      input[Nonce.size + Header.size, output.size], # cipher_text
+      input[Nonce.size, text_size],                 # cipher_text
       output.size                                   # text_size
     ) == 0
   end
 
-  OVERHEAD_SYMMETRIC = Header.size + Nonce.size
+  OVERHEAD_SYMMETRIC = MAC.size + Nonce.size
 end
